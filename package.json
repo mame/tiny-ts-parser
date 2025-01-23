@@ -1,0 +1,18 @@
+{
+  "name": "tiny-ts-parser",
+  "version": "0.1.0",
+  "description": "A lightweight library featuring parsers for multiple minimal subsets of TypeScript, designed for learning and experimenting with type systems",
+  "main": "dist/tiny-ts-parser.js",
+  "scripts": {
+    "build": "tsup",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Yusuke Endoh",
+  "license": "MIT",
+  "dependencies": {
+    "@typescript-eslint/typescript-estree": "^8.21.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5"
+  }
+}
