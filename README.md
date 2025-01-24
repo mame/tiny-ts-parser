@@ -22,6 +22,7 @@ $ deno run -A test.ts ⏎
 ## How to test (deno)
 
 ```
+deno install
 deno test -A
 ```
 
