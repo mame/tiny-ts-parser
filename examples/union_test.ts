@@ -83,17 +83,18 @@ test("tagged union error 4", () =>
   ));
 test("tagged union error 5", () =>
   ng(
-    /test.ts:9:7-9:12 clauses has different types/,
+    /test.ts:9:16-9:21 clauses has different types/,
     `
   type NumOrBoolean = { tag: "num", val: number } | { tag: "bool", val: boolean };
-  const v = <NumOrBoolean>{ tag: "num", val: 42 };
-  switch (v.tag) {
-    case "num": {
-      v.val;
+  const dispatch = (v: NumOrBoolean) => {
+    switch (v.tag) {
+      case "num": {
+        return v.val;
+      }
+      case "bool": {
+        return v.val;
+      }
     }
-    case "bool": {
-      v.val;
-    }
-  }
+  };
 `,
   ));
