@@ -45,7 +45,9 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
     case "Func": {
       if (ty1.tag !== "Func") return false;
       for (let i = 0; i < ty1.params.length; i++) {
-        if (!typeEqNaive(ty1.params[i].type, ty2.params[i].type, map)) return false;
+        if (!typeEqNaive(ty1.params[i].type, ty2.params[i].type, map)) {
+          return false;
+        }
       }
       if (!typeEqNaive(ty1.retType, ty2.retType, map)) return false;
       return true;
@@ -78,17 +80,22 @@ function expandType(ty: Type, tyVarName: string, repTy: Type): Type {
     case "Number":
       return ty;
     case "Func": {
-      const params = ty.params.map(({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) }));
+      const params = ty.params.map(
+        ({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) })
+      );
       const retType = expandType(ty.retType, tyVarName, repTy);
       return { tag: "Func", params, retType };
     }
     case "Object": {
-      const props = ty.props.map(({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) }));
+      const props = ty.props.map(
+        ({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) })
+      );
       return { tag: "Object", props };
     }
     case "Rec": {
       if (ty.name === tyVarName) return ty;
-      return { tag: "Rec", name: ty.name, type: expandType(ty.type, tyVarName, repTy) };
+      const newType = expandType(ty.type, tyVarName, repTy);
+      return { tag: "Rec", name: ty.name, type: newType };
     }
     case "TypeVar": {
       return ty.name === tyVarName ? repTy : ty;
@@ -109,8 +116,12 @@ function typeEqSub(ty1: Type, ty2: Type, seen: [Type, Type][]): boolean {
   for (const [ty1_, ty2_] of seen) {
     if (typeEqNaive(ty1_, ty1, {}) && typeEqNaive(ty2_, ty2, {})) return true;
   }
-  if (ty1.tag === "Rec") return typeEqSub(simplifyType(ty1), ty2, [...seen, [ty1, ty2]]);
-  if (ty2.tag === "Rec") return typeEqSub(ty1, simplifyType(ty2), [...seen, [ty1, ty2]]);
+  if (ty1.tag === "Rec") {
+    return typeEqSub(simplifyType(ty1), ty2, [...seen, [ty1, ty2]]);
+  }
+  if (ty2.tag === "Rec") {
+    return typeEqSub(ty1, simplifyType(ty2), [...seen, [ty1, ty2]]);
+  }
 
   switch (ty2.tag) {
     case "Boolean":
@@ -121,7 +132,9 @@ function typeEqSub(ty1: Type, ty2: Type, seen: [Type, Type][]): boolean {
       if (ty1.tag !== "Func") return false;
       if (ty1.params.length !== ty2.params.length) return false;
       for (let i = 0; i < ty1.params.length; i++) {
-        if (!typeEqSub(ty1.params[i].type, ty2.params[i].type, seen)) return false;
+        if (!typeEqSub(ty1.params[i].type, ty2.params[i].type, seen)) {
+          return false;
+        }
       }
       if (!typeEqSub(ty1.retType, ty2.retType, seen)) return false;
       return true;
@@ -156,7 +169,9 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       if (condTy.tag !== "Boolean") error("boolean expected", t.cond);
       const thnTy = typecheck(t.thn, tyEnv);
       const elsTy = typecheck(t.els, tyEnv);
-      if (!typeEq(thnTy, elsTy)) error("then and else have different types", t);
+      if (!typeEq(thnTy, elsTy)) {
+        error("then and else have different types", t);
+      }
       return thnTy;
     }
     case "number":
@@ -183,12 +198,14 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "call": {
       const funcTy = simplifyType(typecheck(t.func, tyEnv));
       if (funcTy.tag !== "Func") error("function type expected", t.func);
-      if (funcTy.params.length !== t.args.length)
+      if (funcTy.params.length !== t.args.length) {
         error("wrong number of arguments", t);
+      }
       for (let i = 0; i < t.args.length; i++) {
         const argTy = typecheck(t.args[i], tyEnv);
-        if (!typeEq(argTy, funcTy.params[i].type))
+        if (!typeEq(argTy, funcTy.params[i].type)) {
           error("parameter type mismatch", t.args[i]);
+        }
       }
       return funcTy.retType;
     }
@@ -201,7 +218,9 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       return typecheck(t.rest, newTyEnv);
     }
     case "objectNew": {
-      const props = t.props.map(({ name, term }) => ({ name, type: typecheck(term, tyEnv) }));
+      const props = t.props.map(
+        ({ name, term }) => ({ name, type: typecheck(term, tyEnv) })
+      );
       return { tag: "Object", props };
     }
     case "objectGet": {

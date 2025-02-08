@@ -39,7 +39,9 @@ function typeEq(ty1: Type, ty2: Type): boolean {
       if (ty1.tag !== "Func") return false;
       if (ty1.params.length !== ty2.params.length) return false;
       for (let i = 0; i < ty1.params.length; i++) {
-        if (!typeEq(ty1.params[i].type, ty2.params[i].type)) return false;
+        if (!typeEq(ty1.params[i].type, ty2.params[i].type)) {
+          return false;
+        }
       }
       if (!typeEq(ty1.retType, ty2.retType)) return false;
       return true;
@@ -58,7 +60,9 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       if (condTy.tag !== "Boolean") error("boolean expected", t.cond);
       const thnTy = typecheck(t.thn, tyEnv);
       const elsTy = typecheck(t.els, tyEnv);
-      if (!typeEq(thnTy, elsTy)) error("then and else have different types", t);
+      if (!typeEq(thnTy, elsTy)) {
+        error("then and else have different types", t);
+      }
       return thnTy;
     }
     case "number":
@@ -85,12 +89,14 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "call": {
       const funcTy = typecheck(t.func, tyEnv);
       if (funcTy.tag !== "Func") error("function type expected", t.func);
-      if (funcTy.params.length !== t.args.length)
+      if (funcTy.params.length !== t.args.length) {
         error("wrong number of arguments", t);
+      }
       for (let i = 0; i < t.args.length; i++) {
         const argTy = typecheck(t.args[i], tyEnv);
-        if (!typeEq(argTy, funcTy.params[i].type))
+        if (!typeEq(argTy, funcTy.params[i].type)) {
           error("parameter type mismatch", t.args[i]);
+        }
       }
       return funcTy.retType;
     }

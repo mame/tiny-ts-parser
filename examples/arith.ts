@@ -22,7 +22,9 @@ export function typecheck(t: Term): Type {
       if (condTy.tag !== "Boolean") error("boolean expected", t.cond);
       const thnTy = typecheck(t.thn);
       const elsTy = typecheck(t.els);
-      if (thnTy.tag !== elsTy.tag) error("then and else have different types", t);
+      if (thnTy.tag !== elsTy.tag) {
+        error("then and else have different types", t);
+      }
       return thnTy;
     }
     case "number":
