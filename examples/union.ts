@@ -50,27 +50,26 @@ function typeEq(ty1: Type, ty2: Type): boolean {
     case "Object": {
       if (ty1.tag !== "Object") return false;
       if (ty1.props.length !== ty2.props.length) return false;
-      for (const { name: name2, type: propTy2 } of ty2.props) {
-        const found = ty1.props.find(({ name }) => name === name2);
-        if (!found) return false;
-        const { type: propTy1 } = found;
-        if (!typeEq(propTy1, propTy2)) return false;
+      for (const prop2 of ty2.props) {
+        const prop1 = ty1.props.find((prop1) => prop1.name === prop2.name);
+        if (!prop1) return false;
+        if (!typeEq(prop1.type, prop2.type)) return false;
       }
       return true;
     }
     case "TaggedUnion": {
       if (ty1.tag !== "TaggedUnion") return false;
       if (ty1.variants.length !== ty2.variants.length) return false;
-      for (const { label: label1, props: variantProps1 } of ty1.variants) {
-        const found = ty2.variants.find(({ label }) => label === label1);
-        if (!found) return false;
-        const { props: variantProps2 } = found;
-        if (variantProps1.length !== variantProps2.length) return false;
-        for (const { name: name1, type: variantTy1 } of variantProps1) {
-          const found = variantProps2.find(({ name }) => name1 === name);
-          if (!found) return false;
-          const { type: variantTy2 } = found;
-          if (!typeEq(variantTy1, variantTy2)) return false;
+      for (const variant1 of ty1.variants) {
+        const variant2 = ty2.variants.find(
+          (variant2) => variant1.label === variant2.label
+        );
+        if (!variant2) return false;
+        if (variant1.props.length !== variant2.props.length) return false;
+        for (const prop1 of variant1.props) {
+          const prop2 = variant2.props.find((prop2) => prop1.name === prop2.name);
+          if (!prop2) return false;
+          if (!typeEq(prop1.type, prop2.type)) return false;
         }
       }
       return true;
@@ -140,22 +139,21 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "objectGet": {
       const objectTy = typecheck(t.obj, tyEnv);
       if (objectTy.tag !== "Object") error("object type expected", t.obj);
-      const found = objectTy.props.find(({ name }) => name === t.propName);
-      if (!found) error(`unknown property name: ${t.propName}`, t);
-      return found.type;
+      const prop = objectTy.props.find((prop) => prop.name === t.propName);
+      if (!prop) error(`unknown property name: ${t.propName}`, t);
+      return prop.type;
     }
     case "taggedUnionNew": {
       const asTy = t.as;
       if (asTy.tag !== "TaggedUnion") error(`"as" must have a tagged union type`, t);
-      const found = asTy.variants.find(({ label }) => label === t.label);
-      if (!found) error(`unknown variant label: ${t.label}`, t);
-      const { props: expectedProps } = found;
-      for (const { name: name1, term } of t.props) {
-        const found = expectedProps.find(({ name }) => name1 === name);
-        if (!found) error(`unknown property: ${ name1 }`, t);
-        const { type: expectedTy } = found;
-        const actualTy = typecheck(term, tyEnv);
-        if (!typeEq(expectedTy, actualTy)) error("tagged union's term has a wrong type", term);
+      const variant = asTy.variants.find((variant) => variant.label === t.label);
+      if (!variant) error(`unknown variant label: ${t.label}`, t);
+      for (const prop1 of t.props) {
+        const prop2 = variant.props.find((prop2) => prop1.name === prop2.name);
+        if (!prop2) error(`unknown property: ${ prop1.name }`, t);
+        const actualTy = typecheck(prop1.term, tyEnv);
+        if (!typeEq(actualTy, prop2.type))
+          error("tagged union's term has a wrong type", prop1.term);
       }
       return t.as;
     }
@@ -163,14 +161,14 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       const variantTy = tyEnv[t.varName];
       if (variantTy.tag !== "TaggedUnion") error(`variable ${t.varName} must have a tagged union type`, t);
       let retTy: Type | null = null;
-      for (const { label: caseTag, term: clause } of t.clauses) {
-        const found = variantTy.variants.find(({ label }) => label === caseTag);
-        if (!found) error(`tagged union type has no case: ${caseTag}`, clause);
-        const localTy: Type = { tag: "Object", props: found.props };
+      for (const clause of t.clauses) {
+        const variant = variantTy.variants.find((variant) => variant.label === clause.label);
+        if (!variant) error(`tagged union type has no case: ${clause.label}`, clause.term);
+        const localTy: Type = { tag: "Object", props: variant.props };
         const newTyEnv = { ...tyEnv, [t.varName]: localTy };
-        const clauseTy = typecheck(clause, newTyEnv);
+        const clauseTy = typecheck(clause.term, newTyEnv);
         if (retTy) {
-          if (!typeEq(retTy, clauseTy)) error("clauses has different types", clause);
+          if (!typeEq(retTy, clauseTy)) error("clauses has different types", clause.term);
         } else {
           retTy = clauseTy;
         }

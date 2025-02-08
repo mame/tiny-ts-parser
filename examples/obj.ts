@@ -45,11 +45,10 @@ function typeEq(ty1: Type, ty2: Type): boolean {
     case "Object": {
       if (ty1.tag !== "Object") return false;
       if (ty1.props.length !== ty2.props.length) return false;
-      for (const { name: name2, type: propTy2 } of ty2.props) {
-        const found = ty1.props.find(({ name }) => name === name2);
-        if (!found) return false;
-        const { type: propTy1 } = found;
-        if (!typeEq(propTy1, propTy2)) return false;
+      for (const prop2 of ty2.props) {
+        const prop1 = ty1.props.find((prop1) => prop1.name === prop2.name);
+        if (!prop1) return false;
+        if (!typeEq(prop1.type, prop2.type)) return false;
       }
       return true;
     }
@@ -118,9 +117,9 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "objectGet": {
       const objectTy = typecheck(t.obj, tyEnv);
       if (objectTy.tag !== "Object") error("object type expected", t.obj);
-      const found = objectTy.props.find(({ name }) => name === t.propName);
-      if (!found) error(`unknown property name: ${t.propName}`, t);
-      return found.type;
+      const prop = objectTy.props.find((prop) => prop.name === t.propName);
+      if (!prop) error(`unknown property name: ${t.propName}`, t);
+      return prop.type;
     }
   }
 }

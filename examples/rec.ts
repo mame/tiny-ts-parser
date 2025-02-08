@@ -53,11 +53,10 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
     case "Object": {
       if (ty1.tag !== "Object") return false;
       if (ty1.props.length !== ty2.props.length) return false;
-      for (const { name: name1, type: propTy1 } of ty1.props) {
-        const found = ty2.props.find(({ name }) => name1 === name);
-        if (!found) return false;
-        const { type: propTy2 } = found;
-        if (!typeEqNaive(propTy1, propTy2, map)) return false;
+      for (const prop1 of ty1.props) {
+        const prop2 = ty2.props.find((prop2) => prop1.name === prop2.name);
+        if (!prop2) return false;
+        if (!typeEqNaive(prop1.type, prop2.type, map)) return false;
       }
       return true;
     }
@@ -130,11 +129,10 @@ function typeEqSub(ty1: Type, ty2: Type, seen: [Type, Type][]): boolean {
     case "Object": {
       if (ty1.tag !== "Object") return false;
       if (ty1.props.length !== ty2.props.length) return false;
-      for (const { name: name2, type: propTy2 } of ty2.props) {
-        const found = ty1.props.find(({ name }) => name === name2);
-        if (!found) return false;
-        const { type: propTy1 } = found;
-        if (!typeEqSub(propTy1, propTy2, seen)) return false;
+      for (const prop2 of ty2.props) {
+        const prop1 = ty1.props.find((prop1) => prop1.name === prop2.name);
+        if (!prop1) return false;
+        if (!typeEqSub(prop1.type, prop2.type, seen)) return false;
       }
       return true;
     }
@@ -209,9 +207,9 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "objectGet": {
       const objectTy = simplifyType(typecheck(t.obj, tyEnv));
       if (objectTy.tag !== "Object") error("object type expected", t.obj);
-      const found = objectTy.props.find(({ name }) => name === t.propName);
-      if (!found) error(`unknown property name: ${t.propName}`, t);
-      return found.type;
+      const prop = objectTy.props.find((prop) => prop.name === t.propName);
+      if (!prop) error(`unknown property name: ${t.propName}`, t);
+      return prop.type;
     }
     case "recFunc": {
       const funcTy: Type = { tag: "Func", params: t.params, retType: t.retType };
