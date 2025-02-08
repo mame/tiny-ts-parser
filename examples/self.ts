@@ -91,7 +91,9 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
     case "Func": {
       if (ty1.tag !== "Func") return false;
       for (let i = 0; i < ty1.params.length; i++) {
-        if (!typeEqNaive(ty1.params[i].type, ty2.params[i].type, map)) return false;
+        if (!typeEqNaive(ty1.params[i].type, ty2.params[i].type, map)) {
+          return false;
+        }
       }
       if (!typeEqNaive(ty1.retType, ty2.retType, map)) return false;
       return true;
