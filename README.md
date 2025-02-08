@@ -1,6 +1,6 @@
 # tiny-ts-parser
 
-A lightweight library featuring parsers for multiple minimal subsets of TypeScript, designed for a Japanese book named "...".
+A lightweight library featuring parsers for multiple minimal subsets of TypeScript, designed for the Japanese book named "...".
 
 ## How to use
 
