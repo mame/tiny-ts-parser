@@ -10,6 +10,7 @@ export type Type =
   | { loc?: Location; tag: "Number" } // number
   | { loc?: Location; tag: "String" } // string
   | { loc?: Location; tag: "Func"; params: Param[]; retType: Type } // (_: T0, ...) => T
+  | { loc?: Location; tag: "Option"; elemType: Type } // elemType | undefined
   | { loc?: Location; tag: "Array"; elemType: Type } // elemType[]
   | { loc?: Location; tag: "Record"; elemType: Type } // Record<string, elemType>
   | { loc?: Location; tag: "Object"; props: PropertyType[] } // { s0: T0, ... }
@@ -25,6 +26,7 @@ type VariantType = { label: string; props: PropertyType[] };
 type Term =
   | { loc: Location; tag: "true" }
   | { loc: Location; tag: "false" }
+  | { loc: Location; tag: "not"; cond: Term }
   | { loc: Location; tag: "compare"; op: string; left: Term; right: Term }
   | { loc: Location; tag: "if"; cond: Term; thn: Term; els: Term }
   | { loc: Location; tag: "number"; n: number }
@@ -336,6 +338,7 @@ type VariantTypeForSelf = { label: string; props: PropertyTypeForSelf[] };
 type TermForSelf =
   | { tag: "true" }
   | { tag: "false" }
+  | { tag: "not"; cond: TermForSelf }
   | { tag: "compare"; op: string; left: TermForSelf; right: TermForSelf }
   | { tag: "if"; cond: TermForSelf; thn: TermForSelf; els: TermForSelf }
   | { tag: "number"; n: number }
@@ -392,6 +395,8 @@ function freeTypeVars(ty: Type): Set<string> {
     case "Number":
     case "String":
       return new Set();
+    case "Option":
+      return freeTypeVars(ty.elemType);
     case "Array":
       return freeTypeVars(ty.elemType);
     case "Record":
@@ -433,6 +438,8 @@ function expandTypeAliases(ty: Type, recDefined: Set<string>, ctx: Context): Typ
       return { tag: "Number" };
     case "String":
       return { tag: "String" };
+    case "Option":
+      return { tag: "Option", elemType: expandTypeAliases(ty.elemType, recDefined, ctx) };
     case "Array":
       return { tag: "Array", elemType: expandTypeAliases(ty.elemType, recDefined, ctx) };
     case "Record":
@@ -664,7 +671,7 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
     case "UnaryExpression": {
       if (node.operator !== "!") error(`unsupported operator: ${node.operator}`, node);
       const body = convertExpr(node.argument, ctx);
-      return { tag: "if", cond: body, thn: { tag: "false", loc: node.loc }, els: { tag: "true", loc: node.loc }, loc: node.loc };
+      return { tag: "not", cond: body, loc: node.loc };
     }
     // deno-lint-ignore no-fallthrough
     case "BinaryExpression": {
@@ -767,7 +774,7 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
         const index = convertExpr(node.property, ctx);
         return { tag: "member", base, index, loc: node.loc };
       }
-      if (node.computed || node.property.type !== "Identifier") error("object member must be OBJ.STR", node.property);
+      if (node.property.type !== "Identifier") error("object member must be OBJ.STR", node.property);
       const obj = convertExpr(node.object, ctx);
       const propName = node.property.name;
       return { tag: "objectGet", obj, propName, loc: node.loc };
@@ -879,7 +886,7 @@ function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx
           els = nodes[i + 1] ? convertStmt(i + 1, ctx) : { tag: "undefined", loc: node.loc };
         }
         else {
-          els = convertStmts([node.alternate], requireReturn, ctx);
+          els = convertStmts(node.alternate.type == "BlockStatement" ? node.alternate.body : [node.alternate], requireReturn, ctx);
         }
         return newIfNode(cond, thn, els, node.loc);
       }
@@ -1218,6 +1225,7 @@ export function parseSelf(code: string): TermForSelf {
     [
       "true",
       "false",
+      "not",
       "compare",
       "if",
       "number",
@@ -1271,6 +1279,8 @@ export function typeShow(ty: Type): string {
       return "number";
     case "String":
       return "string";
+    case "Option":
+      return `(${typeShow(ty.elemType)} | undefined)`;
     case "Array": {
       if (ty.elemType.tag === "Func") {
         return `(${typeShow(ty.elemType)})[]`;
