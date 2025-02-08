@@ -80,23 +80,23 @@ test("mutual recursion 3", () =>
 test("numlist", () =>
   ok(
     "{ " +
-      `isnil: (l: (mu NumList. ({ tag: "cons", val: { num: number, tail: NumList } } | { tag: "nil", val: boolean }))) => boolean, ` +
-      `hd: (l: (mu NumList. ({ tag: "cons", val: { num: number, tail: NumList } } | { tag: "nil", val: boolean }))) => number, ` +
-      `tl: (l: (mu NumList. ({ tag: "cons", val: { num: number, tail: NumList } } | { tag: "nil", val: boolean }))) => ` +
-      `(mu NumList. ({ tag: "cons", val: { num: number, tail: NumList } } | { tag: "nil", val: boolean })), ` +
-      `sum: (l: (mu NumList. ({ tag: "cons", val: { num: number, tail: NumList } } | { tag: "nil", val: boolean }))) => number, ` +
+      `isnil: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => boolean, ` +
+      `hd: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => number, ` +
+      `tl: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => ` +
+      `(mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" })), ` +
+      `sum: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => number, ` +
       `hd_tl_result: number, ` +
       `sum_result: number ` +
       "}",
     `
   type NumList =
-    | { tag: "cons", val: { num: number, tail: NumList } }
-    | { tag: "nil", val: boolean }
+    | { tag: "cons", num: number, tail: NumList }
+    | { tag: "nil" }
   ;
   const cons = (num: number, tail: NumList) => {
-    return <NumList>{ tag: "cons", val: { num: num, tail: tail }};
+    return <NumList>{ tag: "cons", num: num, tail: tail };
   };
-  const nil = <NumList>{ tag: "nil", val: false };
+  const nil = <NumList>{ tag: "nil" };
   const isnil = (l: NumList) => {
     switch (l.tag) {
       case "cons":
@@ -108,7 +108,7 @@ test("numlist", () =>
   const hd = (l: NumList) => {
     switch (l.tag) {
       case "cons":
-        return l.val.num;
+        return l.num;
       case "nil":
         return 0; /* dummy */
     }
@@ -116,7 +116,7 @@ test("numlist", () =>
   const tl = (l: NumList) => {
     switch (l.tag) {
       case "cons":
-        return l.val.tail;
+        return l.tail;
       case "nil":
         return nil;
     }

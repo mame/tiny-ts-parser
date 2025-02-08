@@ -17,7 +17,7 @@ export type Type =
 
 type Param = { name: string; type: Type };
 type PropertyType = { name: string; type: Type };
-type VariantType = { label: string; type: Type };
+type VariantType = { label: string; props: PropertyType[] };
 
 type Term =
   | { loc: Location; tag: "true" }
@@ -34,7 +34,7 @@ type Term =
   | { loc: Location; tag: "const2"; name: string; init: Term }
   | { loc: Location; tag: "objectNew"; props: PropertyTerm[] }
   | { loc: Location; tag: "objectGet"; obj: Term; propName: string }
-  | { loc: Location; tag: "taggedUnionNew"; label: string; term: Term; as: Type }
+  | { loc: Location; tag: "taggedUnionNew"; label: string; props: PropertyTerm[]; as: Type }
   | { loc: Location; tag: "taggedUnionGet"; varName: string; clauses: VariantTerm[] }
   | { loc: Location; tag: "recFunc"; funcName: string; params: Param[]; retType: Type; body: Term; rest: Term }
   | { loc: Location; tag: "typeAbs"; typeParams: string[]; body: Term }
@@ -128,7 +128,7 @@ export type TypeForTaggedUnion =
 
 export type ParamForTaggedUnion = { name: string; type: TypeForTaggedUnion };
 export type PropertyTypeForTaggedUnion = { name: string; type: TypeForTaggedUnion };
-export type VariantTypeForTaggedUnion = { label: string; type: TypeForTaggedUnion };
+export type VariantTypeForTaggedUnion = { label: string; props: PropertyTypeForTaggedUnion[] };
 
 export type TermForTaggedUnion =
   | { tag: "true" }
@@ -143,7 +143,7 @@ export type TermForTaggedUnion =
   | { tag: "const"; name: string; init: TermForTaggedUnion; rest: TermForTaggedUnion }
   | { tag: "objectNew"; props: PropertyTermForTaggedUnion[] }
   | { tag: "objectGet"; obj: TermForTaggedUnion; propName: string }
-  | { tag: "taggedUnionNew"; label: string; term: TermForTaggedUnion; as: TypeForTaggedUnion }
+  | { tag: "taggedUnionNew"; label: string; props: PropertyTermForTaggedUnion[]; as: TypeForTaggedUnion }
   | { tag: "taggedUnionGet"; varName: string; clauses: VariantTermForTaggedUnion[] };
 
 export type PropertyTermForTaggedUnion = { name: string; term: TermForTaggedUnion };
@@ -247,7 +247,7 @@ export type TypeForRec2 =
 
 export type ParamForRec2 = { name: string; type: TypeForRec2 };
 export type PropertyTypeForRec2 = { name: string; type: TypeForRec2 };
-export type VariantTypeForRec2 = { label: string; type: TypeForRec2 };
+export type VariantTypeForRec2 = { label: string; props: PropertyTypeForRec2[] };
 
 export type TermForRec2 =
   | { tag: "true" }
@@ -262,7 +262,7 @@ export type TermForRec2 =
   | { tag: "const"; name: string; init: TermForRec2; rest: TermForRec2 }
   | { tag: "objectNew"; props: PropertyTermForRec2[] }
   | { tag: "objectGet"; obj: TermForRec2; propName: string }
-  | { tag: "taggedUnionNew"; label: string; term: TermForRec2; as: TypeForRec2 }
+  | { tag: "taggedUnionNew"; label: string; props: PropertyTermForRec2[]; as: TypeForRec2 }
   | { tag: "taggedUnionGet"; varName: string; clauses: VariantTermForRec2[] }
   | {
     tag: "recFunc";
@@ -312,33 +312,6 @@ type Context = {
   typeVarBindings: TypeVarBindings;
 };
 
-export function typeShow(ty: Type): string {
-  switch (ty.tag) {
-    case "Boolean":
-      return "boolean";
-    case "Number":
-      return "number";
-    case "Func": {
-      const params = ty.params.map(({ name, type }) => `${name}: ${typeShow(type)}`);
-      return `(${params.join(", ")}) => ${typeShow(ty.retType)}`;
-    }
-    case "Object": {
-      const props = ty.props.map(({ name, type }) => `${name}: ${typeShow(type)}`);
-      return `{ ${props.join(", ")} }`;
-    }
-    case "TaggedUnion": {
-      const variants = ty.variants.map(({ label, type }) => `{ tag: "${label}", val: ${typeShow(type)} }`);
-      return `(${variants.join(" | ")})`;
-    }
-    case "Rec":
-      return `(mu ${ty.name}. ${typeShow(ty.type)})`;
-    case "TypeAbs":
-      return `<${ty.typeParams.join(", ")}>${typeShow(ty.type)}`;
-    case "TypeVar":
-      return ty.name;
-  }
-}
-
 // Get all free type variables in a type
 function freeTypeVars(ty: Type): Set<string> {
   switch (ty.tag) {
@@ -350,7 +323,9 @@ function freeTypeVars(ty: Type): Set<string> {
     case "Object":
       return ty.props.reduce((r, { type }) => r.union(freeTypeVars(type)), new Set<string>());
     case "TaggedUnion":
-      return ty.variants.reduce((r, { type }) => r.union(freeTypeVars(type)), new Set<string>());
+      return ty.variants.reduce((r, { props }) => {
+        return props.reduce((r, { type }) => r.union(freeTypeVars(type)), r);
+      }, new Set<string>());
     case "Rec":
       return freeTypeVars(ty.type).difference(new Set([ty.name]));
     case "TypeAbs":
@@ -388,9 +363,9 @@ function expandTypeAliases(ty: Type, recDefined: Set<string>, ctx: Context): Typ
       return { tag: "Object", props };
     }
     case "TaggedUnion": {
-      const variants = ty.variants.map(({ label, type }) => ({
+      const variants = ty.variants.map(({ label, props }) => ({
         label,
-        type: expandTypeAliases(type, recDefined, ctx),
+        props: props.map(({ name, type }) => ({ name, type: expandTypeAliases(type, recDefined, ctx) })),
       }));
       return { tag: "TaggedUnion", variants };
     }
@@ -475,13 +450,13 @@ function getProp(property: p.TSESTree.ObjectLiteralElement) {
   return { key: getIdentifier(property.key), value: property.value };
 }
 
-function getTagAndVal(node: p.TSESTree.ObjectExpression) {
-  if (node.properties.length !== 2) error(`tagged union must be <TYPE>{ tag: "TAG", val: EXPR }`, node);
-  const { key: s0, value: v0 } = getProp(node.properties[0]);
-  const { key: s1, value: v1 } = getProp(node.properties[1]);
-  if (s0 !== "tag" || s1 !== "val") error(`tagged union must be <TYPE>{ tag: "TAG", val: EXPR }`, node);
+function getTagAndProps(node: p.TSESTree.ObjectExpression) {
+  const props = node.properties.map(getProp)
+  const tag = props.find(({ key }) => key == "tag");
+  if (!tag) error(`tagged unino must have a "tag" key`, node);
+  const props2 = props.filter(({ key }) => key != "tag");
 
-  return { tag: getLiteralString(v0), val: v1 };
+  return { tag: getLiteralString(tag.value), props: props2 };
 }
 
 function getSwitchVarName(node: p.TSESTree.Expression) {
@@ -542,17 +517,22 @@ function convertType(node: p.TSESTree.TypeNode): Type {
     }
     case "TSUnionType": {
       const variants = node.types.map((variant) => {
-        if (variant.type !== "TSTypeLiteral" || variant.members.length !== 2) {
-          error(`tagged union type must have { tag: "TAG", val: TYPE }`, variant);
+        if (variant.type !== "TSTypeLiteral") {
+          error(`tagged union type must be { tag: "TAG", ... }`, variant);
         }
-        const { key: s0, type: ty0 } = getTypeProp(variant.members[0]);
-        const { key: s1, type: ty1 } = getTypeProp(variant.members[1]);
-        if (s0 !== "tag" || ty0.type !== "TSLiteralType" || s1 !== "val") {
-          error(`tagged union type must have { tag: "TAG", val: TYPE }`, variant);
+        const variant2 = variant.members.map(getTypeProp);
+        const found = variant2.find(({ key }) => key === "tag");
+        if (!found) {
+          error(`tagged union type must be { tag: "TAG", ... }`, variant);
         }
-        const label = getLiteralString(ty0.literal);
-        const type = convertType(ty1);
-        return { label, type };
+        const { type: tagType } = found;
+        if (tagType.type !== "TSLiteralType") {
+          error(`tagged union type must be { tag: "TAG", ... }`, variant);
+        }
+        const label = getLiteralString(tagType.literal);
+        const variant3 = variant2.filter(({ key }) => key !== "tag");
+        const props = variant3.map(({ key, type }) => ({ name: key, type: convertType(type) }));
+        return { label, props };
       });
       return { tag: "TaggedUnion", variants, loc: node.loc };
     }
@@ -624,9 +604,12 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
         error(`type assertion must be <TYPE>{ tag: "TAG", val: EXPR }`, node);
       }
       const ty = simplifyType(convertType(node.typeAnnotation), ctx);
-      const { tag, val } = getTagAndVal(node.expression);
-      const term = convertExpr(val, ctx);
-      return { tag: "taggedUnionNew", label: tag, term, as: ty, loc: node.loc };
+      const { tag, props } = getTagAndProps(node.expression);
+      const props2: PropertyTerm[] = [];
+      props.forEach(({ key, value }) => {
+        props2.push({ name: key, term: convertExpr(value, ctx) });
+      })
+      return { tag: "taggedUnionNew", label: tag, props: props2, as: ty, loc: node.loc };
     }
     case "MemberExpression": {
       if (node.computed || node.property.type !== "Identifier") error("object member must be OBJ.STR", node.property);
@@ -980,5 +963,36 @@ export function error(msg: string, node: any): never {
     throw new Error(`test.ts:${start.line}:${start.column + 1}-${end.line}:${end.column + 1} ${msg}`);
   } else {
     throw new Error(msg);
+  }
+}
+
+// Returns a string that represents a given type
+export function typeShow(ty: Type): string {
+  switch (ty.tag) {
+    case "Boolean":
+      return "boolean";
+    case "Number":
+      return "number";
+    case "Func": {
+      const params = ty.params.map(({ name, type }) => `${name}: ${typeShow(type)}`);
+      return `(${params.join(", ")}) => ${typeShow(ty.retType)}`;
+    }
+    case "Object": {
+      const props = ty.props.map(({ name, type }) => `${name}: ${typeShow(type)}`);
+      return `{ ${props.join(", ")} }`;
+    }
+    case "TaggedUnion": {
+      const variants = ty.variants.map(({ label, props }) => {
+        const propsStr = [`tag: "${label}"`, ...props.map(({name, type}) => `${name}: ${typeShow(type)}`)];
+        return `{ ${propsStr.join(", ")} }`;
+      });
+      return `(${variants.join(" | ")})`;
+    }
+    case "Rec":
+      return `(mu ${ty.name}. ${typeShow(ty.type)})`;
+    case "TypeAbs":
+      return `<${ty.typeParams.join(", ")}>${typeShow(ty.type)}`;
+    case "TypeVar":
+      return ty.name;
   }
 }
