@@ -17,7 +17,8 @@ export type Type =
   | { loc?: Location; tag: "TaggedUnion"; variants: VariantType[] } // { tag: "s0", val: T } | ...
   | { loc?: Location; tag: "Rec"; name: string; type: Type } // mu X. T
   | { loc?: Location; tag: "TypeAbs"; typeParams: string[]; type: Type } // <V0, ...>T
-  | { loc?: Location; tag: "TypeVar"; name: string; typeArgs?: Type[] }; // X
+  | { loc?: Location; tag: "TypeVar"; name: string; typeArgs?: Type[] }
+  | { loc?: Location; tag: "Undefined" }; // X
 
 type Param = { name: string; type: Type };
 type PropertyType = { name: string; type: Type };
@@ -39,6 +40,7 @@ type Term =
   | { loc: Location; tag: "const"; name: string; init: Term; rest: Term }
   | { loc: Location; tag: "seq2"; body: Term[] }
   | { loc: Location; tag: "const2"; name: string; init: Term }
+  | { loc: Location; tag: "assign"; name: string, init: Term }
   | { loc: Location; tag: "for"; ary: Term; body: Term; idx: string; rest: Term }
   | { loc: Location; tag: "forOf"; ary: Term; body: Term; var: string; rest: Term }
   | { loc: Location; tag: "arrayNew"; aryType: Type }
@@ -322,6 +324,7 @@ type TypeForSelf =
   | { tag: "Boolean" }
   | { tag: "Number" }
   | { tag: "String" }
+  | { tag: "Option"; elemType: TypeForSelf }
   | { tag: "Array"; elemType: TypeForSelf }
   | { tag: "Record"; elemType: TypeForSelf }
   | { tag: "Func"; params: ParamForSelf[]; retType: TypeForSelf }
@@ -349,6 +352,7 @@ type TermForSelf =
   | { tag: "call"; func: TermForSelf; args: TermForSelf[] }
   | { tag: "seq"; body: TermForSelf; rest: TermForSelf }
   | { tag: "const"; name: string; init: TermForSelf; rest: TermForSelf }
+  | { tag: "assign"; name: string; init: TermForSelf }
   | { tag: "for"; ary: TermForSelf; body: TermForSelf; idx: string; rest: TermForSelf }
   | { tag: "forOf"; ary: TermForSelf; body: TermForSelf; var: string; rest: TermForSelf }
   | { tag: "arrayNew"; aryType: TypeForSelf }
@@ -415,6 +419,8 @@ function freeTypeVars(ty: Type): Set<string> {
       return freeTypeVars(ty.type).difference(new Set(ty.typeParams));
     case "TypeVar":
       return new Set([ty.name]);
+    case "Undefined":
+      return new Set();
   }
 }
 
@@ -501,6 +507,8 @@ function expandTypeAliases(ty: Type, recDefined: Set<string>, ctx: Context): Typ
         return freeTypeVars(retTy).has(ty.name) ? { tag: "Rec", name: ty.name, type: retTy } : retTy;
       }
     }
+    case "Undefined":
+      return { tag: "Undefined" };
   }
 }
 
@@ -817,6 +825,12 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
       });
       return { tag: "objectNew", props, loc: node.loc };
     }
+    case "AssignmentExpression": {
+      if (node.operator !== "=") error(`unsupported operator: ${node.operator}`, node);
+      const varName = getIdentifier(node.left);
+      const init = convertExpr(node.right, ctx);
+      return { tag: "assign", name: varName, init, loc: node.loc };
+    }
     case "ConditionalExpression": {
       const cond = convertExpr(node.test, ctx);
       const thn = convertExpr(node.consequent, ctx);
@@ -867,9 +881,10 @@ function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx
         if (node.expression.type === "CallExpression" && node.expression.callee.type === "Identifier" && node.expression.callee.name === "error") {
           return { tag: "undefined", loc: node.loc };
         }
-        if (last && requireReturn) error("return is required", node);
         const body = convertExpr(node.expression, ctx);
-        return last ? body : { tag: "seq", body, rest: convertStmt(i + 1, ctx), loc: node.loc };
+        if (last && !requireReturn) return body;
+        const rest: Term = last ? { tag: "undefined", loc: node.loc } : convertStmt(i + 1, ctx);
+        return { tag: "seq", body, rest, loc: node.loc };
       }
       case "ReturnStatement": {
         if (!node.argument) error("return must have an argument", node);
@@ -1221,7 +1236,7 @@ export function parsePoly(code: string): TermForPoly {
 export function parseSelf(code: string): TermForSelf {
   return subsetSystem(
     parse(code),
-    ["Boolean", "Number", "String", "Array", "Record", "Func", "Object", "TaggedUnion", "Rec", "TypeVar"],
+    ["Boolean", "Number", "String", "Option", "Array", "Record", "Func", "Object", "TaggedUnion", "Rec", "TypeVar"],
     [
       "true",
       "false",
@@ -1236,6 +1251,7 @@ export function parseSelf(code: string): TermForSelf {
       "call",
       "seq",
       "const",
+      "assign",
       "for",
       "forOf",
       "arrayNew",
@@ -1311,5 +1327,7 @@ export function typeShow(ty: Type): string {
       return `<${ty.typeParams.join(", ")}>${typeShow(ty.type)}`;
     case "TypeVar":
       return ty.name;
+    case "Undefined":
+      return "undefined";
   }
 }
