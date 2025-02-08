@@ -14,5 +14,10 @@
   },
   "unstable": [
     "sloppy-imports"
-  ]
+  ],
+  "compilerOptions": {
+    "lib": [
+      "esnext"
+    ]
+  }
 }

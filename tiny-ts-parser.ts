@@ -3,6 +3,8 @@ import * as p from "@typescript-eslint/typescript-estree";
 type Position = { line: number; column: number };
 type Location = { start: Position; end: Position };
 
+// Integrated node definition of types and terms.
+// Not designed for type check but used to get a subset for each system.
 export type Type =
   | { loc?: Location; tag: "Boolean" } // boolean
   | { loc?: Location; tag: "Number" } // number
@@ -41,6 +43,7 @@ type Term =
 type PropertyTerm = { name: string; term: Term };
 type VariantTerm = { label: string; term: Term };
 
+// ---
 // Types and terms for each system (automatically generated):
 export type TypeForArith =
   | { tag: "Boolean" }
@@ -297,7 +300,11 @@ export type TermForPoly =
   | { tag: "typeApp"; typeAbs: TermForPoly; typeArgs: TypeForPoly[] };
 // End of automatically generated code
 
-// for internal
+// ---
+// Preprocessing of type variables.
+// Replace type aliases with their definitions.
+// If recursive, convert it to a recursive type.
+
 type TypeAliasMap = Record<string, { typeParams: string[] | null; type: Type }>;
 type TypeVarBindings = Record<string, Type>;
 type Context = {
@@ -364,7 +371,7 @@ function extendContextWithTypeVars(ctx: Context, tyVars: string[]): Context {
   };
 }
 
-// Replace type variables with their bindings
+// Expand type variables in a type
 function expandTypeAliases(ty: Type, recDefined: Set<string>, ctx: Context): Type {
   switch (ty.tag) {
     case "Boolean":
@@ -431,10 +438,15 @@ function expandTypeAliases(ty: Type, recDefined: Set<string>, ctx: Context): Typ
   }
 }
 
-// Replace type variables with their bindings
+// Replace type variables in a type
 function simplifyType(ty: Type, ctx: Context) {
   return expandTypeAliases(ty, new Set(), ctx);
 }
+
+// ---
+// Convert estree nodes to our simplified node definition
+
+// Helper functions to get properties of estree nodes
 
 function getIdentifier(node: p.TSESTree.Expression | p.TSESTree.PrivateIdentifier | p.TSESTree.TSQualifiedName) {
   if (node.type !== "Identifier") error("identifier expected", node);
@@ -502,6 +514,9 @@ function getRecFunc(node: p.TSESTree.FunctionDeclaration, ctx: Context, restFunc
   return { tag: "recFunc", funcName, params, retType, body, rest, loc: node.loc };
 }
 
+
+
+// Convert estree type node to our simplified node definition
 function convertType(node: p.TSESTree.TypeNode): Type {
   switch (node.type) {
     case "TSBooleanKeyword":
@@ -551,6 +566,7 @@ function convertType(node: p.TSESTree.TypeNode): Type {
   }
 }
 
+// Convert estree expression node to our simplified node definition
 function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
   switch (node.type) {
     case "BinaryExpression": {
@@ -644,6 +660,7 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
   }
 }
 
+// Convert estree statement nodes to our simplified node definition
 function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx: Context): Term {
   function convertStmt(i: number, ctx: Context): Term {
     const last = nodes.length - 1 === i;
@@ -705,6 +722,7 @@ function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx
   return convertStmt(0, ctx);
 }
 
+// Convert estree program nodes to our simplified node definition
 function convertProgram(nodes: p.TSESTree.Statement[]): Term {
   const globalTypeAliasMap: TypeAliasMap = {};
 
@@ -728,6 +746,9 @@ function convertProgram(nodes: p.TSESTree.Statement[]): Term {
 
   return convertStmts(stmts, false, ctx);
 }
+
+// ---
+// Parse functions
 
 type ExtractTagsSub<T, K> = T extends Type | Term ? ExtractTags<T, K>
   : T extends Type[] ? ExtractTags<Type, K>[]
@@ -948,6 +969,9 @@ export function parsePoly(code: string): TermForPoly {
     ["true", "false", "if", "number", "add", "var", "func", "call", "seq", "const", "typeAbs", "typeApp"],
   );
 }
+
+// ---
+// Helper functions
 
 // deno-lint-ignore no-explicit-any
 export function error(msg: string, node: any): never {

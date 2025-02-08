@@ -2,6 +2,7 @@
   "name": "tiny-ts-parser",
   "version": "0.1.0",
   "description": "A lightweight library featuring parsers for multiple minimal subsets of TypeScript, designed for learning and experimenting with type systems",
+  "type": "commonjs",
   "main": "dist/tiny-ts-parser.js",
   "files": [
     "dist",
@@ -17,6 +18,7 @@
     "@typescript-eslint/typescript-estree": "^8.21.0"
   },
   "devDependencies": {
-    "tsup": "^8.3.5"
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3"
   }
 }
