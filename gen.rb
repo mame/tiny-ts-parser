@@ -138,7 +138,7 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
         const found = ty2.variants.find(({ label }) => label === label1);
         if (!found) return false;
         const { props: variantProps2 } = found;
-        if (variantProps1.length != variantProps2.length) return false;
+        if (variantProps1.length !== variantProps2.length) return false;
         for (const { name: name1, type: propTy1 } of variantProps1) {
           const found = variantProps2.find(({ name }) => name1 === name);
           if (!found) return false;
