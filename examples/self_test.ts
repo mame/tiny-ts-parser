@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseSelf, typeShow } from "tiny-ts-parser";
 import { typecheck } from "./self.ts";
@@ -13,5 +13,5 @@ function ok(expected: string, code: string) {
   assert.equal(expected, typeShow(run(code)));
 }
 
-const self = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "self.ts")).toString()
+const self = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "self.ts")).toString();
 test("self-hosting", () => ok(`number`, self));

@@ -118,7 +118,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     }
     case "objectNew": {
       const props = t.props.map(
-        ({ name, term }) => ({ name, type: typecheck(term, tyEnv) })
+        ({ name, term }) => ({ name, type: typecheck(term, tyEnv) }),
       );
       return { tag: "Object", props };
     }

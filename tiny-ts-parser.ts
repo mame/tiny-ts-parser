@@ -40,7 +40,7 @@ type Term =
   | { loc: Location; tag: "const"; name: string; init: Term; rest: Term }
   | { loc: Location; tag: "seq2"; body: Term[] }
   | { loc: Location; tag: "const2"; name: string; init: Term }
-  | { loc: Location; tag: "assign"; name: string, init: Term }
+  | { loc: Location; tag: "assign"; name: string; init: Term }
   | { loc: Location; tag: "for"; ary: Term; body: Term; idx: string; rest: Term }
   | { loc: Location; tag: "forOf"; ary: Term; body: Term; var: string; rest: Term }
   | { loc: Location; tag: "arrayNew"; aryType: Type }
@@ -49,7 +49,7 @@ type Term =
   | { loc: Location; tag: "recordCopy"; record: Term }
   | { loc: Location; tag: "recordExt"; record: Term; key: Term; val: Term }
   | { loc: Location; tag: "recordIn"; record: Term; key: Term }
-  | { loc: Location; tag: "member"; base: Term, index: Term }
+  | { loc: Location; tag: "member"; base: Term; index: Term }
   | { loc: Location; tag: "objectNew"; props: PropertyTerm[] }
   | { loc: Location; tag: "objectGet"; obj: Term; propName: string }
   | { loc: Location; tag: "taggedUnionNew"; label: string; props: PropertyTerm[]; as: Type }
@@ -361,7 +361,7 @@ type TermForSelf =
   | { tag: "recordCopy"; record: TermForSelf }
   | { tag: "recordExt"; record: TermForSelf; key: TermForSelf; val: TermForSelf }
   | { tag: "recordIn"; record: TermForSelf; key: TermForSelf }
-  | { tag: "member"; base: TermForSelf, index: TermForSelf }
+  | { tag: "member"; base: TermForSelf; index: TermForSelf }
   | { tag: "objectNew"; props: PropertyTermForSelf[] }
   | { tag: "objectGet"; obj: TermForSelf; propName: string }
   | { tag: "taggedUnionNew"; label: string; props: PropertyTermForSelf[]; as: TypeForSelf }
@@ -550,7 +550,7 @@ function getProp(property: p.TSESTree.ObjectLiteralElement) {
 }
 
 function getTagAndProps(node: p.TSESTree.ObjectExpression) {
-  const props = node.properties.map(getProp)
+  const props = node.properties.map(getProp);
   const tag = props.find(({ key }) => key == "tag");
   if (!tag) error(`tagged union must have a "tag" key`, node);
   const props2 = props.filter(({ key }) => key != "tag");
@@ -587,8 +587,6 @@ function getRecFunc(node: p.TSESTree.FunctionDeclaration, ctx: Context, restFunc
   const rest: Term = restFunc ? restFunc() : { tag: "var", name: funcName, loc: node.loc };
   return { tag: "recFunc", funcName, params, retType, body, rest, loc: node.loc };
 }
-
-
 
 // Convert estree type node to our simplified node definition
 function convertType(node: p.TSESTree.TypeNode): Type {
@@ -663,8 +661,7 @@ function newIfNode(cond: Term, thn: Term, els: Term, loc: Location): Term {
         const label = cond.right.s;
         if (cond.op === "===") {
           return { tag: "taggedUnionGet", varName, clauses: [{ label, term: thn }], defaultClause: els, loc };
-        }
-        else if (cond.op === "!==") {
+        } else if (cond.op === "!==") {
           return { tag: "taggedUnionGet", varName, clauses: [{ label, term: els }], defaultClause: thn, loc };
         }
       }
@@ -761,12 +758,14 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
           const props2: PropertyTerm[] = [];
           props.forEach(({ key, value }) => {
             props2.push({ name: key, term: convertExpr(value, ctx) });
-          })
+          });
           return { tag: "taggedUnionNew", label: tag, props: props2, as: ty, loc: node.loc };
         }
         case "ArrayExpression": {
           const ty = simplifyType(convertType(node.typeAnnotation), ctx);
-          if (node.expression.elements.length !== 0) error("type-asserted array literal must be empty", node.expression.elements);
+          if (node.expression.elements.length !== 0) {
+            error("type-asserted array literal must be empty", node.expression.elements);
+          }
           return { tag: "arrayNew", aryType: ty, loc: node.loc };
         }
         default: {
@@ -878,7 +877,10 @@ function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx
         return getRecFunc(node, ctx, last ? null : () => convertStmt(i + 1, ctx));
       }
       case "ExpressionStatement": {
-        if (node.expression.type === "CallExpression" && node.expression.callee.type === "Identifier" && node.expression.callee.name === "error") {
+        if (
+          node.expression.type === "CallExpression" && node.expression.callee.type === "Identifier" &&
+          node.expression.callee.name === "error"
+        ) {
           return { tag: "undefined", loc: node.loc };
         }
         const body = convertExpr(node.expression, ctx);
@@ -893,15 +895,18 @@ function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx
       case "IfStatement": {
         const cond = convertExpr(node.test, ctx);
         const thn = node.consequent.type == "BlockStatement"
-        ? convertStmts(node.consequent.body, requireReturn, ctx)
-        : convertStmts([node.consequent], requireReturn, ctx);
+          ? convertStmts(node.consequent.body, requireReturn, ctx)
+          : convertStmts([node.consequent], requireReturn, ctx);
         let els: Term;
         if (!node.alternate) {
           if (!requireReturn) error("else clause is requried", node);
           els = nodes[i + 1] ? convertStmt(i + 1, ctx) : { tag: "undefined", loc: node.loc };
-        }
-        else {
-          els = convertStmts(node.alternate.type == "BlockStatement" ? node.alternate.body : [node.alternate], requireReturn, ctx);
+        } else {
+          els = convertStmts(
+            node.alternate.type == "BlockStatement" ? node.alternate.body : [node.alternate],
+            requireReturn,
+            ctx,
+          );
         }
         return newIfNode(cond, thn, els, node.loc);
       }
@@ -939,7 +944,10 @@ function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx
           error(`for statement must be "for (let i = 0; i < ary.length; i++)"`, node);
         }
         const testRight = node.test.right;
-        if (testRight.type !== "MemberExpression" || testRight.computed || testRight.property.type !== "Identifier" || testRight.property.name !== "length") {
+        if (
+          testRight.type !== "MemberExpression" || testRight.computed || testRight.property.type !== "Identifier" ||
+          testRight.property.name !== "length"
+        ) {
           error(`for statement must be "for (let i = 0; i < ary.length; i++)"`, node);
         }
         const ary = convertExpr(testRight.object, ctx);
@@ -966,8 +974,7 @@ function convertStmts(nodes: p.TSESTree.Statement[], requireReturn: boolean, ctx
           const clause = convertStmts(stmts, requireReturn, ctx);
           if (caseNode.test) {
             clauses.push({ label: getLiteralString(caseNode.test), term: clause });
-          }
-          else {
+          } else {
             defaultClause = clause;
           }
         });
@@ -1316,7 +1323,7 @@ export function typeShow(ty: Type): string {
     }
     case "TaggedUnion": {
       const variants = ty.variants.map(({ label, props }) => {
-        const propsStr = [`tag: "${label}"`, ...props.map(({name, type}) => `${name}: ${typeShow(type)}`)];
+        const propsStr = [`tag: "${label}"`, ...props.map(({ name, type }) => `${name}: ${typeShow(type)}`)];
         return `{ ${propsStr.join(", ")} }`;
       });
       return `(${variants.join(" | ")})`;

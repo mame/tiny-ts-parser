@@ -41,7 +41,7 @@ type Term =
   | { tag: "recordCopy"; record: Term }
   | { tag: "recordExt"; record: Term; key: Term; val: Term }
   | { tag: "recordIn"; record: Term; key: Term }
-  | { tag: "member"; base: Term, index: Term }
+  | { tag: "member"; base: Term; index: Term }
   | { tag: "objectNew"; props: PropertyTerm[] }
   | { tag: "objectGet"; obj: Term; propName: string }
   | { tag: "taggedUnionNew"; label: string; props: PropertyTerm[]; as: Type }
@@ -111,7 +111,7 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
       if (ty1.variants.length !== ty2.variants.length) return false;
       for (const variant1 of ty1.variants) {
         const variant2 = ty2.variants.find(
-          (variant2: VariantType) => variant1.label === variant2.label
+          (variant2: VariantType) => variant1.label === variant2.label,
         );
         if (!variant2) return false;
         if (variant1.props.length !== variant2.props.length) return false;
@@ -196,27 +196,24 @@ function simplifyType(ty: Type): Type {
 }
 
 type IfType =
-| { tag: "Option"; elemType: Type; name: string; thn: Term; els: Term }
-| { tag: "Boolean"; thn: Term; els: Term };
+  | { tag: "Option"; elemType: Type; name: string; thn: Term; els: Term }
+  | { tag: "Boolean"; thn: Term; els: Term };
 function checkIfType(cond: Term, thn: Term, els: Term): IfType {
   if (cond.tag === "var") {
     return { tag: "Option", name: cond.name, thn, els } as IfType;
-  }
-  else if (cond.tag === "not") {
+  } else if (cond.tag === "not") {
     const cond2 = cond.cond;
     if (cond2.tag === "var") {
       return { tag: "Option", name: cond2.name, thn: els, els: thn } as IfType;
-    }
-    else {
+    } else {
       return { tag: "Boolean" } as IfType;
     }
-  }
-  else {
+  } else {
     return { tag: "Boolean" } as IfType;
   }
 }
 
-function typeEqSub(ty1: Type, ty2: Type, seen: { left: Type, right: Type }[]): boolean {
+function typeEqSub(ty1: Type, ty2: Type, seen: { left: Type; right: Type }[]): boolean {
   for (const tuple of seen) {
     if (typeEqNaive(tuple.left, ty1, {} as Record<string, string>)) {
       if (typeEqNaive(tuple.right, ty2, {} as Record<string, string>)) {
@@ -224,8 +221,12 @@ function typeEqSub(ty1: Type, ty2: Type, seen: { left: Type, right: Type }[]): b
       }
     }
   }
-  if (ty1.tag === "Rec") return typeEqSub(simplifyType(ty1 as Type), ty2 as Type, [...seen, { left: ty1 as Type, right: ty2 as Type }]);
-  if (ty2.tag === "Rec") return typeEqSub(ty1 as Type, simplifyType(ty2 as Type), [...seen, { left: ty1 as Type, right: ty2 as Type }]);
+  if (ty1.tag === "Rec") {
+    return typeEqSub(simplifyType(ty1 as Type), ty2 as Type, [...seen, { left: ty1 as Type, right: ty2 as Type }]);
+  }
+  if (ty2.tag === "Rec") {
+    return typeEqSub(ty1 as Type, simplifyType(ty2 as Type), [...seen, { left: ty1 as Type, right: ty2 as Type }]);
+  }
 
   if (ty1.tag === "Undefined") return true;
   if (ty2.tag === "Undefined") return true;
@@ -273,7 +274,7 @@ function typeEqSub(ty1: Type, ty2: Type, seen: { left: Type, right: Type }[]): b
       if (ty1.variants.length !== ty2.variants.length) return false;
       for (const variant1 of ty1.variants) {
         const variant2 = ty2.variants.find(
-          (variant2: VariantType) => variant1.label === variant2.label
+          (variant2: VariantType) => variant1.label === variant2.label,
         );
         if (!variant2) return false;
         if (variant1.props.length !== variant2.props.length) return false;
@@ -291,7 +292,7 @@ function typeEqSub(ty1: Type, ty2: Type, seen: { left: Type, right: Type }[]): b
 }
 
 function typeEq(ty1: Type, ty2: Type): boolean {
-  return typeEqSub(ty1, ty2, [] as { left: Type, right: Type }[]);
+  return typeEqSub(ty1, ty2, [] as { left: Type; right: Type }[]);
 }
 
 function typeJoin(ty1: Type, ty2: Type): Type {
@@ -325,15 +326,13 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
           const thnTy = typecheck(ifType.thn, newTyEnv);
           const elsTy = typecheck(ifType.els, tyEnv);
           return typeJoin(thnTy, elsTy);
-        }
-        else {
+        } else {
           const thnTy = typecheck(t.thn, tyEnv);
           const elsTy = typecheck(t.els, tyEnv);
           if (!typeEq(thnTy, elsTy)) error("then and else have different types", t);
           return typeJoin(thnTy, elsTy);
         }
-      }
-      else {
+      } else {
         const thnTy = typecheck(t.thn, tyEnv);
         const elsTy = typecheck(t.els, tyEnv);
         if (!typeEq(thnTy, elsTy)) error("then and else have different types", t);
@@ -366,12 +365,14 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "call": {
       const funcTy = simplifyType(typecheck(t.func, tyEnv));
       if (funcTy.tag !== "Func") error("function type expected", t.func);
-      if (funcTy.params.length !== t.args.length)
+      if (funcTy.params.length !== t.args.length) {
         error("wrong number of arguments", t);
+      }
       for (let i = 0; i < t.args.length; i++) {
         const argTy = typecheck(t.args[i], tyEnv);
-        if (!typeEq(argTy, funcTy.params[i].type))
+        if (!typeEq(argTy, funcTy.params[i].type)) {
           error("parameter type mismatch", t.args[i]);
+        }
       }
       return funcTy.retType;
     }
@@ -451,7 +452,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       switch (baseTy.tag) {
         case "Array": {
           if (indexTy.tag !== "Number") error("number expected", t.index);
-          return baseTy.elemType
+          return baseTy.elemType;
         }
         case "Record": {
           if (indexTy.tag !== "String") error("string expected", t.index);
@@ -482,7 +483,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
             return prop.type;
           }
           if (t.propName !== "tag") error(`only "tag" is readable on tagged union`, t);
-          return { tag: "String"} as Type;
+          return { tag: "String" } as Type;
         }
         case "Object": {
           const prop = objectTy.props.find((prop: PropertyType) => prop.name === t.propName);
@@ -492,8 +493,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
         case "Array": {
           if (t.propName === "length") {
             return { tag: "Number" } as Type;
-          }
-          else if (t.propName === "find") {
+          } else if (t.propName === "find") {
             return {
               tag: "Func",
               params: [...[] as Param[], {
@@ -506,8 +506,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
               }],
               retType: { tag: "Option", elemType: objectTy.elemType } as Type,
             } as Type;
-          }
-          else if (t.propName === "filter") {
+          } else if (t.propName === "filter") {
             return {
               tag: "Func",
               params: [...[] as Param[], {
@@ -520,8 +519,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
               }],
               retType: { tag: "Array", elemType: objectTy.elemType } as Type,
             } as Type;
-          }
-          else {
+          } else {
             error(`only "length", "filter" and "find" are readable on array`, t);
             throw new Error("unreachable");
           }
@@ -539,10 +537,11 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       if (!variant) error(`unknown variant label: ${t.label}`, t);
       for (const prop1 of t.props) {
         const prop2 = variant.props.find((prop2: PropertyType) => prop1.name === prop2.name);
-        if (!prop2) error(`unknown property: ${ prop1.name }`, t);
+        if (!prop2) error(`unknown property: ${prop1.name}`, t);
         const actualTy = typecheck(prop1.term, tyEnv);
-        if (!typeEq(actualTy, prop2.type))
+        if (!typeEq(actualTy, prop2.type)) {
           error("tagged union's term has a wrong type", prop1.term);
+        }
       }
       return t.as;
     }
@@ -561,7 +560,9 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
               if (!found) error(`unknown property: ${prop0.name}`, t);
               if (!typeEq(prop0.type, found.type)) error(`tagged union has a wrong property type: ${prop0.name}`, t);
             }
-            if (variant0.props.length !== variant1.props.length) error(`tagged union has a wrong number of properties: ${variant0.label}`, t);
+            if (variant0.props.length !== variant1.props.length) {
+              error(`tagged union has a wrong number of properties: ${variant0.label}`, t);
+            }
           }
         }
         if (!found) error(`tagged union has a wrong variant: ${variant0.label}`, t);

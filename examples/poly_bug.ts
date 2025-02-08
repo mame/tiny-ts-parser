@@ -32,7 +32,7 @@ function subst(ty: Type, tyVarName: string, repTy: Type): Type {
       return ty;
     case "Func": {
       const params = ty.params.map(
-        ({ name, type }) => ({ name, type: subst(type, tyVarName, repTy) })
+        ({ name, type }) => ({ name, type: subst(type, tyVarName, repTy) }),
       );
       const retType = subst(ty.retType, tyVarName, repTy);
       return { tag: "Func", params, retType };

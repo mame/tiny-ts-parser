@@ -81,14 +81,14 @@ function expandType(ty: Type, tyVarName: string, repTy: Type): Type {
       return ty;
     case "Func": {
       const params = ty.params.map(
-        ({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) })
+        ({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) }),
       );
       const retType = expandType(ty.retType, tyVarName, repTy);
       return { tag: "Func", params, retType };
     }
     case "Object": {
       const props = ty.props.map(
-        ({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) })
+        ({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) }),
       );
       return { tag: "Object", props };
     }
@@ -219,7 +219,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     }
     case "objectNew": {
       const props = t.props.map(
-        ({ name, term }) => ({ name, type: typecheck(term, tyEnv) })
+        ({ name, term }) => ({ name, type: typecheck(term, tyEnv) }),
       );
       return { tag: "Object", props };
     }
