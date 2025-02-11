@@ -1,6 +1,6 @@
 {
   "name": "tiny-ts-parser",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A lightweight library featuring parsers for multiple minimal subsets of TypeScript, designed for learning and experimenting with type systems",
   "type": "commonjs",
   "main": "dist/tiny-ts-parser.js",
