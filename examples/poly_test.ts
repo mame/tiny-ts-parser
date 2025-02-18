@@ -202,3 +202,13 @@ test("type param error 7", () =>
   (f: F<boolean>) => 1;
 `,
   ));
+
+test("type application to non var", () =>
+  ok(
+    "number",
+    `
+  const f = <X>(x: X) => x;
+  const g = () => f;
+  g()<number>(1);
+`,
+  ));
