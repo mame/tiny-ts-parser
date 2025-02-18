@@ -11,7 +11,7 @@ type Type =
 
 type Param = { name: string; type: Type };
 type PropertyType = { name: string; type: Type };
-type VariantType = { label: string; props: PropertyType[] };
+type VariantType = { tagLabel: string; props: PropertyType[] };
 
 type Term =
   | { tag: "true" }
@@ -26,7 +26,7 @@ type Term =
   | { tag: "const"; name: string; init: Term; rest: Term }
   | { tag: "objectNew"; props: PropertyTerm[] }
   | { tag: "objectGet"; obj: Term; propName: string }
-  | { tag: "taggedUnionNew"; label: string; props: PropertyTerm[]; as: Type }
+  | { tag: "taggedUnionNew"; tagLabel: string; props: PropertyTerm[]; as: Type }
   | { tag: "taggedUnionGet"; varName: string; clauses: VariantTerm[] }
   | {
     tag: "recFunc";
@@ -38,7 +38,7 @@ type Term =
   };
 
 type PropertyTerm = { name: string; term: Term };
-type VariantTerm = { label: string; term: Term };
+type VariantTerm = { tagLabel: string; term: Term };
 
 type TypeEnv = Record<string, Type>;
 
@@ -72,7 +72,7 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
       if (ty1.variants.length !== ty2.variants.length) return false;
       for (const variant1 of ty1.variants) {
         const variant2 = ty2.variants.find(
-          (variant2) => variant1.label === variant2.label,
+          (variant2) => variant1.tagLabel === variant2.tagLabel,
         );
         if (!variant2) return false;
         if (variant1.props.length !== variant2.props.length) return false;
@@ -115,11 +115,11 @@ function expandType(ty: Type, tyVarName: string, repTy: Type): Type {
       return { tag: "Object", props };
     }
     case "TaggedUnion": {
-      const variants = ty.variants.map(({ label, props }) => {
+      const variants = ty.variants.map(({ tagLabel, props }) => {
         const newProps = props.map(
           ({ name, type }) => ({ name, type: expandType(type, tyVarName, repTy) }),
         );
-        return { label, props: newProps };
+        return { tagLabel, props: newProps };
       });
       return { tag: "TaggedUnion", variants };
     }
@@ -185,7 +185,7 @@ function typeEqSub(ty1: Type, ty2: Type, seen: [Type, Type][]): boolean {
       if (ty1.variants.length !== ty2.variants.length) return false;
       for (const variant1 of ty1.variants) {
         const variant2 = ty2.variants.find(
-          (variant2) => variant1.label === variant2.label,
+          (variant2) => variant1.tagLabel === variant2.tagLabel,
         );
         if (!variant2) return false;
         if (variant1.props.length !== variant2.props.length) return false;
@@ -284,9 +284,9 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
         error(`"as" must have a tagged union type`, t);
       }
       const variant = asTy.variants.find(
-        (variant) => variant.label === t.label,
+        (variant) => variant.tagLabel === t.tagLabel,
       );
-      if (!variant) error(`unknown variant label: ${t.label}`, t);
+      if (!variant) error(`unknown variant tag: ${t.tagLabel}`, t);
       for (const prop1 of t.props) {
         const prop2 = variant.props.find((prop2) => prop1.name === prop2.name);
         if (!prop2) error(`unknown property: ${prop1.name}`, t);
@@ -305,10 +305,10 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       let retTy: Type | null = null;
       for (const clause of t.clauses) {
         const variant = variantTy.variants.find(
-          (variant) => variant.label === clause.label,
+          (variant) => variant.tagLabel === clause.tagLabel,
         );
         if (!variant) {
-          error(`tagged union type has no case: ${clause.label}`, clause.term);
+          error(`tagged union type has no case: ${clause.tagLabel}`, clause.term);
         }
         const localTy: Type = { tag: "Object", props: variant.props };
         const newTyEnv = { ...tyEnv, [t.varName]: localTy };
