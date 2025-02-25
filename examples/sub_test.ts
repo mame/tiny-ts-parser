@@ -49,8 +49,8 @@ test("record sub 4", () =>
     "number",
     `
   type R1 = { a: number };
-  type R2 = { a: number, b: number };
-  type R3 = { a: number, b: number, c: number };
+  type R2 = { a: number; b: number };
+  type R3 = { a: number; b: number; c: number };
   const g = (f: (_: R2) => R2) => 1;
   const f = (_: R1) => ({ a: 1, b: 2, c: 3 });
   g(f);
@@ -61,8 +61,8 @@ test("record sub error 1", () =>
     /test.ts:7:5-7:6 parameter type mismatch/,
     `
   type R1 = { a: number };
-  type R2 = { a: number, b: number };
-  type R3 = { a: number, b: number, c: number };
+  type R2 = { a: number; b: number };
+  type R3 = { a: number; b: number; c: number };
   const g = (f: (_: R2) => R2) => 1;
   const f = (_: R3) => ({ a: 1, b: 2, c: 3 });
   g(f);
@@ -74,15 +74,15 @@ test("record sub error 2", () =>
     /test.ts:7:5-7:6 parameter type mismatch/,
     `
   type R1 = { a: number };
-  type R2 = { a: number, b: number };
-  type R3 = { a: number, b: number, c: number };
+  type R2 = { a: number; b: number };
+  type R3 = { a: number; b: number; c: number };
   const g = (f: (_: R2) => R2) => 1;
   const f = (_: R1) => ({ a: 1 });
   g(f);
 `,
   ));
 /*
-test("if", () => ok("{ a: number, b: number }", `
+test("if", () => ok("{ a: number; b: number }", `
   true ? { a: 1, b: 2 } : { a: 2, b: 1 }
 `));
 */

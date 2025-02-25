@@ -18,9 +18,9 @@ function ng(expected: RegExp, code: string) {
 
 test("fib", () =>
   ok(
-    "(mu NumStream. { num: number, rest: () => NumStream })",
+    "(mu NumStream. { num: number; rest: () => NumStream })",
     `
-type NumStream = { num: number, rest: () => NumStream };
+type NumStream = { num: number; rest: () => NumStream };
 
 function numbers(n: number): NumStream {
     return { num: n, rest: () => numbers(n + 1) };
@@ -80,17 +80,17 @@ test("mutual recursion 3", () =>
 test("numlist", () =>
   ok(
     "{ " +
-      `isnil: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => boolean, ` +
-      `hd: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => number, ` +
-      `tl: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => ` +
-      `(mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" })), ` +
-      `sum: (l: (mu NumList. ({ tag: "cons", num: number, tail: NumList } | { tag: "nil" }))) => number, ` +
-      `hd_tl_result: number, ` +
+      `isnil: (l: (mu NumList. ({ tag: "cons"; num: number; tail: NumList } | { tag: "nil" }))) => boolean; ` +
+      `hd: (l: (mu NumList. ({ tag: "cons"; num: number; tail: NumList } | { tag: "nil" }))) => number; ` +
+      `tl: (l: (mu NumList. ({ tag: "cons"; num: number; tail: NumList } | { tag: "nil" }))) => ` +
+      `(mu NumList. ({ tag: "cons"; num: number; tail: NumList } | { tag: "nil" })); ` +
+      `sum: (l: (mu NumList. ({ tag: "cons"; num: number; tail: NumList } | { tag: "nil" }))) => number; ` +
+      `hd_tl_result: number; ` +
       `sum_result: number ` +
       "}",
     `
   type NumList =
-    | { tag: "cons", num: number, tail: NumList }
+    | { tag: "cons"; num: number; tail: NumList }
     | { tag: "nil" }
   ;
   const cons = (num: number, tail: NumList) => {

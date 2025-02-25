@@ -41,9 +41,9 @@ test("rec hungry 2", () =>
 
 test("fib", () =>
   ok(
-    "(mu NumStream. { num: number, rest: () => NumStream })",
+    "(mu NumStream. { num: number; rest: () => NumStream })",
     `
-type NumStream = { num: number, rest: () => NumStream };
+type NumStream = { num: number; rest: () => NumStream };
 
 function numbers(n: number): NumStream {
     return { num: n, rest: () => numbers(n + 1) };

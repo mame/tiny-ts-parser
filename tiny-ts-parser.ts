@@ -1319,12 +1319,12 @@ export function typeShow(ty: Type): string {
     }
     case "Object": {
       const props = ty.props.map(({ name, type }) => `${name}: ${typeShow(type)}`);
-      return `{ ${props.join(", ")} }`;
+      return `{ ${props.join("; ")} }`;
     }
     case "TaggedUnion": {
       const variants = ty.variants.map(({ tagLabel, props }) => {
         const propsStr = [`tag: "${tagLabel}"`, ...props.map(({ name, type }) => `${name}: ${typeShow(type)}`)];
-        return `{ ${propsStr.join(", ")} }`;
+        return `{ ${propsStr.join("; ")} }`;
       });
       return `(${variants.join(" | ")})`;
     }

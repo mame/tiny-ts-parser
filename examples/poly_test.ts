@@ -137,7 +137,7 @@ test("type param 2", () =>
   ));
 test("type param 3", () =>
   ok(
-    "(f: { a: boolean, b: number }) => number",
+    "(f: { a: boolean; b: number }) => number",
     `
   type F<X, Y> = {a: X, b: Y};
   (f: F<boolean, number>) => 1;

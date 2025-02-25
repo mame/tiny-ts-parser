@@ -13,5 +13,5 @@ function ok(expected: string, code: string) {
   assert.equal(expected, typeShow(run(code)));
 }
 
-const self = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "self.ts")).toString();
+const self = readFileSync(join(dirname(fileURLToPath((import.meta as any).url)), "self.ts")).toString();
 test("self-hosting", () => ok(`number`, self));

@@ -16,7 +16,7 @@ function ng(expected: RegExp, code: string) {
   }, expected);
 }
 
-test("object 1", () => ok("{ a: number, b: boolean }", `({ a: 1, b: true });`));
+test("object 1", () => ok("{ a: number; b: boolean }", `({ a: 1, b: true });`));
 test("object 2", () =>
   ok(
     "number",
