@@ -747,6 +747,7 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
       return { tag: "call", func, args, loc: node.loc };
     }
     case "TSAsExpression":
+    case "TSSatisfiesExpression":
     case "TSTypeAssertion": {
       switch (node.expression.type) {
         case "ObjectExpression": {

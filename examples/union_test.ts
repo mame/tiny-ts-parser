@@ -21,7 +21,7 @@ test("tagged union", () =>
     "number",
     `
   type NumOrBoolean = { tag: "num", num: number } | { tag: "bool", bool: boolean };
-  const v = <{ tag: "num", num: number } | { tag: "bool", bool: boolean }>{ tag: "num", num: 42 };
+  const v = { tag: "num", num: 42 } satisfies { tag: "num", num: number } | { tag: "bool", bool: boolean };
   switch (v.tag) {
     case "num": {
       v.num + 1;
@@ -34,19 +34,19 @@ test("tagged union", () =>
   ));
 test("tagged union error 1", () =>
   ng(
-    /test.ts:3:46-3:50 tagged union's term has a wrong type/,
+    /test.ts:3:32-3:36 tagged union's term has a wrong type/,
     `
   type NumOrBoolean = { tag: "num", num: number } | { tag: "bool", bool: boolean };
-  const v = <NumOrBoolean>{ tag: "num", num: true };
+  const v = { tag: "num", num: true } satisfies NumOrBoolean;
   1;
 `,
   ));
 test("tagged union error 2", () =>
   ng(
-    /test.ts:3:13-3:53 unknown property: bool/,
+    /test.ts:3:13-3:62 unknown property: bool/,
     `
   type NumOrBoolean = { tag: "num", num: number } | { tag: "bool", bool: boolean };
-  const v = <NumOrBoolean>{ tag: "num", bool: true };
+  const v = { tag: "num", bool: true } satisfies NumOrBoolean;
   1;
 `,
   ));
@@ -67,7 +67,7 @@ test("tagged union error 4", () =>
     /test.ts:12:7-12:20 tagged union type has no case: unknown/,
     `
   type NumOrBoolean = { tag: "num", val: number } | { tag: "bool", val: boolean };
-  const v = <NumOrBoolean>{ tag: "num", val: 42 };
+  const v = { tag: "num", val: 42 } satisfies NumOrBoolean;
   switch (v.tag) {
     case "num": {
       v.val + 1;
