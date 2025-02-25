@@ -85,7 +85,7 @@ function typeEqSub(ty1: Type, ty2: Type, map: Record<string, string>): boolean {
 }
 
 function typeEq(ty1: Type, ty2: Type, tyVars: string[]): boolean {
-  const map = {} as Record<string, string>;
+  const map: Record<string, string> = {};
   for (const tyVar of tyVars) map[tyVar] = tyVar;
   return typeEqSub(ty1, ty2, map);
 }

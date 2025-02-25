@@ -91,6 +91,9 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
     }
     case "TypeVar": {
       if (ty1.tag !== "TypeVar") return false;
+      if (map[ty1.name] === undefined) {
+        throw new Error(`unknown type variable: ${ty1.name}`);
+      }
       return map[ty1.name] === ty2.name;
     }
   }

@@ -159,6 +159,9 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
 %   end
     case "TypeVar": {
       if (ty1.tag !== "TypeVar") return false;
+      if (map[ty1.name] === undefined) {
+        throw new Error(`unknown type variable: ${ty1.name}`);
+      }
       return map[ty1.name] === ty2.name;
     }
   }
@@ -357,7 +360,7 @@ function CHECK(ty1: Type, ty2: Type): boolean {
 % if sys == :poly_bug || sys == :poly
 
 function CHECK(ty1: Type, ty2: Type, tyVars: string[]): boolean {
-  const map = {} as Record<string, string>;
+  const map: Record<string, string> = {};
   for (const tyVar of tyVars) map[tyVar] = tyVar;
   return CHECK0(ty1, ty2, map);
 }
