@@ -4,7 +4,7 @@ import { parsePoly, typeShow } from "tiny-ts-parser";
 import { typecheck } from "./poly.ts";
 
 function run(code: string) {
-  return typecheck(parsePoly(code), {}, new Set<string>());
+  return typecheck(parsePoly(code), {}, []);
 }
 function ok(expected: string, code: string) {
   assert.equal(expected, typeShow(run(code)));

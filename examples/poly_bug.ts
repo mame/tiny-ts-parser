@@ -84,13 +84,13 @@ function typeEqSub(ty1: Type, ty2: Type, map: Record<string, string>): boolean {
   }
 }
 
-function typeEq(ty1: Type, ty2: Type, tyVars: Set<string>): boolean {
+function typeEq(ty1: Type, ty2: Type, tyVars: string[]): boolean {
   const map = {} as Record<string, string>;
   for (const tyVar of tyVars) map[tyVar] = tyVar;
   return typeEqSub(ty1, ty2, map);
 }
 
-export function typecheck(t: Term, tyEnv: TypeEnv, tyVars: Set<string>): Type {
+export function typecheck(t: Term, tyEnv: TypeEnv, tyVars: string[]): Type {
   switch (t.tag) {
     case "true":
       return { tag: "Boolean" };
@@ -150,8 +150,8 @@ export function typecheck(t: Term, tyEnv: TypeEnv, tyVars: Set<string>): Type {
       return typecheck(t.rest, newTyEnv, tyVars);
     }
     case "typeAbs": {
-      const tyVars2 = new Set(tyVars);
-      for (const tyVar of t.typeParams) tyVars2.add(tyVar);
+      const tyVars2 = [...tyVars];
+      for (const tyVar of t.typeParams) tyVars2.push(tyVar);
       const bodyTy = typecheck(t.body, tyEnv, tyVars2);
       return { tag: "TypeAbs", typeParams: t.typeParams, type: bodyTy };
     }

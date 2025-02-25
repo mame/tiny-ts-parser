@@ -356,7 +356,7 @@ function CHECK(ty1: Type, ty2: Type): boolean {
 % end
 % if sys == :poly_bug || sys == :poly
 
-function CHECK(ty1: Type, ty2: Type, tyVars: Set<string>): boolean {
+function CHECK(ty1: Type, ty2: Type, tyVars: string[]): boolean {
   const map = {} as Record<string, string>;
   for (const tyVar of tyVars) map[tyVar] = tyVar;
   return CHECK0(ty1, ty2, map);
@@ -566,8 +566,8 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
 % end
 % if sys == :poly_bug || sys == :poly
     case "typeAbs": {
-      const tyVars2 = new Set(tyVars);
-      for (const tyVar of t.typeParams) tyVars2.add(tyVar);
+      const tyVars2 = [...tyVars];
+      for (const tyVar of t.typeParams) tyVars2.push(tyVar);
       const bodyTy = typecheck(t.body, tyEnv, tyVars2);
       return { tag: "TypeAbs", typeParams: t.typeParams, type: bodyTy };
     }
@@ -615,7 +615,7 @@ END
     code = code.gsub("CHECK", "typeEq")
     code = code.gsub("SUBST", "expandType")
   when :poly_bug, :poly
-    code = code.gsub(", tyEnv: TypeEnv", ", tyEnv: TypeEnv, tyVars: Set<string>")
+    code = code.gsub(", tyEnv: TypeEnv", ", tyEnv: TypeEnv, tyVars: string[]")
     code = code.gsub(", tyEnv)", ", tyEnv, tyVars)")
     code = code.gsub(", newTyEnv)", ", newTyEnv, tyVars)")
     code = code.gsub("CHECK_CTX_PARAM", "map: Record<string, string>")

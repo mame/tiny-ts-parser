@@ -81,3 +81,14 @@ test("mutual recursion 2", () =>
   1;
 `,
   ));
+
+test("mutual recursion 3", () =>
+  ok(
+    "(b: (mu B. { b: { a: B } })) => boolean",
+    `
+  type A = { a: { b: A } };
+  type B = { b: { a: B } };
+  const f = (x: A): boolean => true;
+  (b: B) => f({ a: b });
+`,
+  ));
