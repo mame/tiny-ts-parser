@@ -67,7 +67,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       return { tag: "Number" };
     }
     case "var": {
-      if (!(t.name in tyEnv)) error(`unknown variable: ${t.name}`, t);
+      if (tyEnv[t.name] === undefined) error(`unknown variable: ${t.name}`, t);
       return tyEnv[t.name];
     }
     case "func": {

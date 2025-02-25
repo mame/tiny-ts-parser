@@ -339,7 +339,7 @@ function CHECK0(ty1: Type, ty2: Type, CHECK_CTX_PARAM): boolean {
     }
     case "TypeVar": {
       if (ty1.tag !== "TypeVar") return false;
-      if (!(ty1.name in map)) {
+      if (map[ty1.name] === undefined) {
         throw new Error(`unknown type variable: ${ty1.name}`);
       }
       return map[ty1.name] === ty2.name;
@@ -394,7 +394,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     }
 % if sys != :arith
     case "var": {
-      if (!(t.name in tyEnv)) error(`unknown variable: ${t.name}`, t);
+      if (tyEnv[t.name] === undefined) error(`unknown variable: ${t.name}`, t);
       return tyEnv[t.name];
     }
     case "func": {
