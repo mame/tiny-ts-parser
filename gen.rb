@@ -556,11 +556,11 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       for (const { name, type } of t.params) {
         newTyEnv[name] = type;
       }
-      const newTyEnv2 = { ...newTyEnv, [t.funcName]: funcTy };
-      const retTy = typecheck(t.body, newTyEnv2);
+      newTyEnv[t.funcName] = funcTy;
+      const retTy = typecheck(t.body, newTyEnv);
       if (!CHECK(t.retType, retTy)) error("wrong return type", t);
-      const newTyEnv3 = { ...tyEnv, [t.funcName]: funcTy };
-      return typecheck(t.rest, newTyEnv3);
+      const newTyEnv2 = { ...tyEnv, [t.funcName]: funcTy };
+      return typecheck(t.rest, newTyEnv2);
     }
 %   end
 % end
