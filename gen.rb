@@ -245,7 +245,7 @@ function SUBST(ty: Type, tyVarName: string, repTy: Type): Type {
 function simplifyType(ty: Type): Type {
   switch (ty.tag) {
     case "Rec":
-      return SUBST(ty.type, ty.name, ty);
+      return simplifyType(SUBST(ty.type, ty.name, ty));
     default:
       return ty;
   }

@@ -137,7 +137,7 @@ function expandType(ty: Type, tyVarName: string, repTy: Type): Type {
 function simplifyType(ty: Type): Type {
   switch (ty.tag) {
     case "Rec":
-      return expandType(ty.type, ty.name, ty);
+      return simplifyType(expandType(ty.type, ty.name, ty));
     default:
       return ty;
   }
