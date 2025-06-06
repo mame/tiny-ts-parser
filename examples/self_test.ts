@@ -13,5 +13,6 @@ function ok(expected: string, code: string) {
   assert.equal(expected, typeShow(run(code)));
 }
 
+// deno-lint-ignore no-explicit-any
 const self = readFileSync(join(dirname(fileURLToPath((import.meta as any).url)), "self.ts")).toString();
 test("self-hosting", () => ok(`number`, self));

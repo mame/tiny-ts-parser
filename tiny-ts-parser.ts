@@ -358,7 +358,6 @@ type TermForSelf =
   | { tag: "arrayNew"; aryType: TypeForSelf }
   | { tag: "arrayExt"; ary: TermForSelf; val: TermForSelf }
   | { tag: "recordNew"; recordType: TypeForSelf }
-  | { tag: "recordCopy"; record: TermForSelf }
   | { tag: "recordExt"; record: TermForSelf; key: TermForSelf; val: TermForSelf }
   | { tag: "recordIn"; record: TermForSelf; key: TermForSelf }
   | { tag: "member"; base: TermForSelf; index: TermForSelf }
@@ -1043,14 +1042,26 @@ function subsetSystem<Types extends Type["tag"], Terms extends Term["tag"]>(
   }
 
   // deno-lint-ignore no-explicit-any
+  function check(val: any): any {
+    if (typeof val !== "object") return val;
+    if (Array.isArray(val)) return val.map(check);
+    if (val.tag) return subsetSystem<Types, Terms>(val, keepTypes, keepTerms, keepDefaultClause);
+    if (val.name || val.tagLabel) {
+      // deno-lint-ignore no-explicit-any
+      const newNode: any = {};
+      Object.entries(val).forEach(([key, val]) => {
+        newNode[key] = check(val);
+      });
+      return newNode;
+    }
+    return val;
+  }
+
+  // deno-lint-ignore no-explicit-any
   const newNode: any = {};
   Object.entries(node).forEach(([key, val]) => {
     if (!keepDefaultClause && key === "defaultClause") return;
-    if (typeof val !== "object" || !val.tag) {
-      newNode[key] = val;
-    } else {
-      newNode[key] = subsetSystem<Types, Terms>(val, keepTypes, keepTerms, keepDefaultClause);
-    }
+    newNode[key] = check(val);
   });
   return newNode;
 }
@@ -1268,7 +1279,6 @@ export function parseSelf(code: string): TermForSelf {
       "arrayNew",
       "arrayExt",
       "recordNew",
-      "recordCopy",
       "recordExt",
       "recordIn",
       "member",

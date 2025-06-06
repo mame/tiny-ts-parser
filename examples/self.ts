@@ -38,7 +38,6 @@ type Term =
   | { tag: "arrayNew"; aryType: Type }
   | { tag: "arrayExt"; ary: Term; val: Term }
   | { tag: "recordNew"; recordType: Type }
-  | { tag: "recordCopy"; record: Term }
   | { tag: "recordExt"; record: Term; key: Term; val: Term }
   | { tag: "recordIn"; record: Term; key: Term }
   | { tag: "member"; base: Term; index: Term }
@@ -357,7 +356,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       return tyEnv[t.name];
     }
     case "func": {
-      let newTyEnv = { ...tyEnv };
+      let newTyEnv = tyEnv;
       for (const param of t.params) {
         newTyEnv = { ...newTyEnv, [param.name]: param.type };
       }
@@ -427,10 +426,6 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       const retTy = t.recordType;
       if (t.recordType.tag !== "Record") error(`recordNew must have a type "Record<string, sometype>"`, t);
       return retTy;
-    }
-    case "recordCopy": {
-      const recordTy = simplifyType(typecheck(t.record, tyEnv));
-      return recordTy;
     }
     case "recordExt": {
       const recordTy = simplifyType(typecheck(t.record, tyEnv));
@@ -597,7 +592,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     }
     case "recFunc": {
       const funcTy: Type = { tag: "Func", params: t.params, retType: t.retType } as Type;
-      let newTyEnv = { ...tyEnv };
+      let newTyEnv = tyEnv;
       for (const param of t.params) {
         newTyEnv = { ...newTyEnv, [param.name]: param.type };
       }
