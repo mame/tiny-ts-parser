@@ -359,7 +359,6 @@ type TermForSelf =
   | { tag: "arrayExt"; ary: TermForSelf; val: TermForSelf }
   | { tag: "recordNew"; recordType: TypeForSelf }
   | { tag: "recordExt"; record: TermForSelf; key: TermForSelf; val: TermForSelf }
-  | { tag: "recordIn"; record: TermForSelf; key: TermForSelf }
   | { tag: "member"; base: TermForSelf; index: TermForSelf }
   | { tag: "objectNew"; props: PropertyTermForSelf[] }
   | { tag: "objectGet"; obj: TermForSelf; propName: string }
@@ -702,6 +701,7 @@ function convertExpr(node: p.TSESTree.Expression, ctx: Context): Term {
       }
     }
     case "Identifier":
+      if (node.name == "undefined") return { tag: "undefined", loc: node.loc };
       return { tag: "var", name: node.name, loc: node.loc };
     // deno-lint-ignore no-fallthrough
     case "Literal":
@@ -1280,7 +1280,6 @@ export function parseSelf(code: string): TermForSelf {
       "arrayExt",
       "recordNew",
       "recordExt",
-      "recordIn",
       "member",
       "objectNew",
       "objectGet",

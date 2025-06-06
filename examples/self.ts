@@ -39,7 +39,6 @@ type Term =
   | { tag: "arrayExt"; ary: Term; val: Term }
   | { tag: "recordNew"; recordType: Type }
   | { tag: "recordExt"; record: Term; key: Term; val: Term }
-  | { tag: "recordIn"; record: Term; key: Term }
   | { tag: "member"; base: Term; index: Term }
   | { tag: "objectNew"; props: PropertyTerm[] }
   | { tag: "objectGet"; obj: Term; propName: string }
@@ -352,7 +351,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "string":
       return { tag: "String" } as Type;
     case "var": {
-      if (!(t.name in tyEnv)) error(`unknown variable: ${t.name}`, t);
+      if (tyEnv[t.name] === undefined) error(`unknown variable: ${t.name}`, t);
       return tyEnv[t.name];
     }
     case "func": {
@@ -387,7 +386,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     }
     case "assign": {
       // TODO: const/let check
-      if (!(t.name in tyEnv)) error(`unknown variable: ${t.name}`, t);
+      if (tyEnv[t.name] === undefined) error(`unknown variable: ${t.name}`, t);
       const ty = typecheck(t.init, tyEnv);
       if (!typeEq(tyEnv[t.name], ty)) error("type mismatch", t.init);
       return ty;
@@ -435,13 +434,6 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       const valTy = simplifyType(typecheck(t.val, tyEnv));
       if (!typeEq(recordTy.elemType, valTy)) error("value type is inconsistent", t.val);
       return recordTy as Type;
-    }
-    case "recordIn": {
-      const recordTy = simplifyType(typecheck(t.record, tyEnv));
-      if (recordTy.tag !== "Record") error("record expected", t.record);
-      const keyTy = simplifyType(typecheck(t.key, tyEnv));
-      if (keyTy.tag !== "String") error("string expected", t.key);
-      return { tag: "Boolean" } as Type;
     }
     case "member": {
       const baseTy = simplifyType(typecheck(t.base, tyEnv));
