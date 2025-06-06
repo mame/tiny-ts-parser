@@ -138,19 +138,19 @@ function typeEqNaive(ty1: Type, ty2: Type, map: Record<string, string>): boolean
 function expandType(ty: Type, tyVarName: string, repTy: Type): Type {
   switch (ty.tag) {
     case "Boolean":
-      return ty as Type;
+      return ty satisfies Type;
     case "Number":
-      return ty as Type;
+      return ty satisfies Type;
     case "String":
-      return ty as Type;
+      return ty satisfies Type;
     case "Option": {
-      return { tag: "Option", elemType: expandType(ty.elemType, tyVarName, repTy) } as Type;
+      return { tag: "Option", elemType: expandType(ty.elemType, tyVarName, repTy) } satisfies Type;
     }
     case "Array": {
-      return { tag: "Array", elemType: expandType(ty.elemType, tyVarName, repTy) } as Type;
+      return { tag: "Array", elemType: expandType(ty.elemType, tyVarName, repTy) } satisfies Type;
     }
     case "Record": {
-      return { tag: "Record", elemType: expandType(ty.elemType, tyVarName, repTy) } as Type;
+      return { tag: "Record", elemType: expandType(ty.elemType, tyVarName, repTy) } satisfies Type;
     }
     case "Func": {
       let params = [] as Param[];
@@ -158,14 +158,14 @@ function expandType(ty: Type, tyVarName: string, repTy: Type): Type {
         params = [...params, { name: param.name, type: expandType(param.type, tyVarName, repTy) }];
       }
       const retType = expandType(ty.retType, tyVarName, repTy);
-      return { tag: "Func", params, retType } as Type;
+      return { tag: "Func", params, retType } satisfies Type;
     }
     case "Object": {
       let props = [] as PropertyType[];
       for (const prop of ty.props) {
         props = [...props, { name: prop.name, type: expandType(prop.type, tyVarName, repTy) }];
       }
-      return { tag: "Object", props } as Type;
+      return { tag: "Object", props } satisfies Type;
     }
     case "TaggedUnion": {
       let variants = [] as VariantType[];
@@ -176,56 +176,56 @@ function expandType(ty: Type, tyVarName: string, repTy: Type): Type {
         }
         variants = [...variants, { tagLabel: variant.tagLabel, props }];
       }
-      return { tag: "TaggedUnion", variants } as Type;
+      return { tag: "TaggedUnion", variants } satisfies Type;
     }
     case "Rec": {
-      if (ty.name === tyVarName) return ty as Type;
-      return { tag: "Rec", name: ty.name, type: expandType(ty.type, tyVarName, repTy) } as Type;
+      if (ty.name === tyVarName) return ty satisfies Type;
+      return { tag: "Rec", name: ty.name, type: expandType(ty.type, tyVarName, repTy) } satisfies Type;
     }
     case "TypeVar": {
-      return ty.name === tyVarName ? repTy : ty as Type;
+      return ty.name === tyVarName ? repTy : ty satisfies Type;
     }
     case "Undefined":
-      return { tag: "Undefined" } as Type;
+      return { tag: "Undefined" } satisfies Type;
   }
 }
 
 function simplifyType(ty: Type): Type {
-  if (ty.tag === "Rec") return expandType(ty.type, ty.name, { tag: "Rec", name: ty.name, type: ty.type } as Type);
-  return ty as Type;
+  if (ty.tag === "Rec") return expandType(ty.type, ty.name, { tag: "Rec", name: ty.name, type: ty.type } satisfies Type);
+  return ty satisfies Type;
 }
 
 type IfType =
-  | { tag: "Option"; elemType: Type; name: string; thn: Term; els: Term }
-  | { tag: "Boolean"; thn: Term; els: Term };
+  | { tag: "Option"; name: string; thn: Term; els: Term }
+  | { tag: "Boolean" };
 function checkIfType(cond: Term, thn: Term, els: Term): IfType {
   if (cond.tag === "var") {
-    return { tag: "Option", name: cond.name, thn, els } as IfType;
+    return { tag: "Option", name: cond.name, thn, els } satisfies IfType;
   } else if (cond.tag === "not") {
     const cond2 = cond.cond;
     if (cond2.tag === "var") {
-      return { tag: "Option", name: cond2.name, thn: els, els: thn } as IfType;
+      return { tag: "Option", name: cond2.name, thn: els, els: thn } satisfies IfType;
     } else {
-      return { tag: "Boolean" } as IfType;
+      return { tag: "Boolean" } satisfies IfType;
     }
   } else {
-    return { tag: "Boolean" } as IfType;
+    return { tag: "Boolean" } satisfies IfType;
   }
 }
 
 function typeEqSub(ty1: Type, ty2: Type, seen: { left: Type; right: Type }[]): boolean {
   for (const tuple of seen) {
-    if (typeEqNaive(tuple.left, ty1, {} as Record<string, string>)) {
-      if (typeEqNaive(tuple.right, ty2, {} as Record<string, string>)) {
+    if (typeEqNaive(tuple.left, ty1, {} satisfies Record<string, string>)) {
+      if (typeEqNaive(tuple.right, ty2, {} satisfies Record<string, string>)) {
         return true;
       }
     }
   }
   if (ty1.tag === "Rec") {
-    return typeEqSub(simplifyType(ty1 as Type), ty2 as Type, [...seen, { left: ty1 as Type, right: ty2 as Type }]);
+    return typeEqSub(simplifyType(ty1 satisfies Type), ty2 satisfies Type, [...seen, { left: ty1 satisfies Type, right: ty2 satisfies Type }]);
   }
   if (ty2.tag === "Rec") {
-    return typeEqSub(ty1 as Type, simplifyType(ty2 as Type), [...seen, { left: ty1 as Type, right: ty2 as Type }]);
+    return typeEqSub(ty1 satisfies Type, simplifyType(ty2 satisfies Type), [...seen, { left: ty1 satisfies Type, right: ty2 satisfies Type }]);
   }
 
   if (ty1.tag === "Undefined") return true;
@@ -292,35 +292,35 @@ function typeEqSub(ty1: Type, ty2: Type, seen: { left: Type; right: Type }[]): b
 }
 
 function typeEq(ty1: Type, ty2: Type): boolean {
-  return typeEqSub(ty1, ty2, [] as { left: Type; right: Type }[]);
+  return typeEqSub(ty1, ty2, [] satisfies { left: Type; right: Type }[]);
 }
 
 function typeJoin(ty1: Type, ty2: Type): Type {
-  if (ty1.tag !== "Undefined") return ty1 as Type;
+  if (ty1.tag !== "Undefined") return ty1 satisfies Type;
   return ty2;
 }
 
 export function typecheck(t: Term, tyEnv: TypeEnv): Type {
   switch (t.tag) {
     case "true":
-      return { tag: "Boolean" } as Type;
+      return { tag: "Boolean" } satisfies Type;
     case "false":
-      return { tag: "Boolean" } as Type;
+      return { tag: "Boolean" } satisfies Type;
     case "not": {
       const ty = simplifyType(typecheck(t.cond, tyEnv));
       if (ty.tag !== "Boolean") error("boolean expected", t.cond);
-      return { tag: "Boolean" } as Type;
+      return { tag: "Boolean" } satisfies Type;
     }
     case "compare": {
       const leftTy = simplifyType(typecheck(t.left, tyEnv));
       const rightTy = simplifyType(typecheck(t.right, tyEnv));
       if (!typeEq(leftTy, rightTy)) error("compare different types", t.left);
-      return { tag: "Boolean" } as Type;
+      return { tag: "Boolean" } satisfies Type;
     }
     case "if": {
       const ifType = checkIfType(t.cond, t.thn, t.els);
       if (ifType.tag === "Option") {
-        const condTy = typecheck({ tag: "var", name: ifType.name } as Term, tyEnv);
+        const condTy = typecheck({ tag: "var", name: ifType.name } satisfies Term, tyEnv);
         if (condTy.tag === "Option") {
           const newTyEnv = { ...tyEnv, [ifType.name]: condTy.elemType };
           const thnTy = typecheck(ifType.thn, newTyEnv);
@@ -340,16 +340,16 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       }
     }
     case "number":
-      return { tag: "Number" } as Type;
+      return { tag: "Number" } satisfies Type;
     case "add": {
       const leftTy = simplifyType(typecheck(t.left, tyEnv));
       if (leftTy.tag !== "Number") error("number expected", t.left);
       const rightTy = simplifyType(typecheck(t.right, tyEnv));
       if (rightTy.tag !== "Number") error("number expected", t.right);
-      return { tag: "Number" } as Type;
+      return { tag: "Number" } satisfies Type;
     }
     case "string":
-      return { tag: "String" } as Type;
+      return { tag: "String" } satisfies Type;
     case "var": {
       if (tyEnv[t.name] === undefined) error(`unknown variable: ${t.name}`, t);
       return tyEnv[t.name];
@@ -360,7 +360,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
         newTyEnv = { ...newTyEnv, [param.name]: param.type };
       }
       const retType = typecheck(t.body, newTyEnv);
-      return { tag: "Func", params: t.params, retType } as Type;
+      return { tag: "Func", params: t.params, retType } satisfies Type;
     }
     case "call": {
       const funcTy = simplifyType(typecheck(t.func, tyEnv));
@@ -394,7 +394,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
     case "for": {
       const aryTy = simplifyType(typecheck(t.ary, tyEnv));
       if (aryTy.tag !== "Array") error("array expected", t.ary);
-      const newTyEnv: TypeEnv = { ...tyEnv, [t.idx]: { tag: "Number" } as Type };
+      const newTyEnv: TypeEnv = { ...tyEnv, [t.idx]: { tag: "Number" } satisfies Type };
       const bodyTy = typecheck(t.body, newTyEnv);
       const restTy = typecheck(t.rest, tyEnv);
       if (!typeEq(bodyTy, restTy)) error(`return type is inconsistent`, t);
@@ -419,7 +419,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       if (aryTy.tag !== "Array") error("array expected", t.ary);
       const valTy = simplifyType(typecheck(t.val, tyEnv));
       if (!typeEq(aryTy.elemType, valTy)) error("value type is inconsistent", t.val);
-      return aryTy as Type;
+      return aryTy satisfies Type;
     }
     case "recordNew": {
       const retTy = t.recordType;
@@ -433,7 +433,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       if (keyTy.tag !== "String") error("string expected", t.key);
       const valTy = simplifyType(typecheck(t.val, tyEnv));
       if (!typeEq(recordTy.elemType, valTy)) error("value type is inconsistent", t.val);
-      return recordTy as Type;
+      return recordTy satisfies Type;
     }
     case "member": {
       const baseTy = simplifyType(typecheck(t.base, tyEnv));
@@ -459,7 +459,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
         const propTy = typecheck(prop.term, tyEnv);
         propTypes = [...propTypes, { name: prop.name, type: propTy }];
       }
-      return { tag: "Object", props: propTypes } as Type;
+      return { tag: "Object", props: propTypes } satisfies Type;
     }
     case "objectGet": {
       const objectTy = simplifyType(typecheck(t.obj, tyEnv));
@@ -472,7 +472,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
             return prop.type;
           }
           if (t.propName !== "tag") error(`only "tag" is readable on tagged union`, t);
-          return { tag: "String" } as Type;
+          return { tag: "String" } satisfies Type;
         }
         case "Object": {
           const prop = objectTy.props.find((prop: PropertyType) => prop.name === t.propName);
@@ -481,33 +481,33 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
         }
         case "Array": {
           if (t.propName === "length") {
-            return { tag: "Number" } as Type;
+            return { tag: "Number" } satisfies Type;
           } else if (t.propName === "find") {
             return {
               tag: "Func",
-              params: [...[] as Param[], {
+              params: [...[] satisfies Param[], {
                 name: "f",
                 type: {
                   tag: "Func",
-                  params: [...[] as Param[], { name: "x", type: objectTy.elemType }],
-                  retType: { tag: "Boolean" } as Type,
-                } as Type,
+                  params: [...[] satisfies Param[], { name: "x", type: objectTy.elemType }],
+                  retType: { tag: "Boolean" } satisfies Type,
+                } satisfies Type,
               }],
-              retType: { tag: "Option", elemType: objectTy.elemType } as Type,
-            } as Type;
+              retType: { tag: "Option", elemType: objectTy.elemType } satisfies Type,
+            } satisfies Type;
           } else if (t.propName === "filter") {
             return {
               tag: "Func",
-              params: [...[] as Param[], {
+              params: [...[] satisfies Param[], {
                 name: "f",
                 type: {
                   tag: "Func",
-                  params: [...[] as Param[], { name: "x", type: objectTy.elemType }],
-                  retType: { tag: "Boolean" } as Type,
-                } as Type,
+                  params: [...[] satisfies Param[], { name: "x", type: objectTy.elemType }],
+                  retType: { tag: "Boolean" } satisfies Type,
+                } satisfies Type,
               }],
-              retType: { tag: "Array", elemType: objectTy.elemType } as Type,
-            } as Type;
+              retType: { tag: "Array", elemType: objectTy.elemType } satisfies Type,
+            } satisfies Type;
           } else {
             error(`only "length", "filter" and "find" are readable on array`, t);
             throw new Error("unreachable");
@@ -556,7 +556,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
         }
         if (!found) error(`tagged union has a wrong variant: ${variant0.tagLabel}`, t);
       }
-      return retTy as Type;
+      return retTy satisfies Type;
     }
     case "taggedUnionGet": {
       const variantTy = simplifyType(tyEnv[t.varName]);
@@ -567,14 +567,14 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
         }
         return true;
       });
-      const defaultLocalTy: Type = { tag: "TaggedUnion", variants: defaultVariants } as Type;
+      const defaultLocalTy: Type = { tag: "TaggedUnion", variants: defaultVariants } satisfies Type;
       const newTyEnv = { ...tyEnv, [t.varName]: defaultLocalTy };
       let retTy = typecheck(t.defaultClause, newTyEnv);
       for (const clause of t.clauses) {
         const variant = variantTy.variants.find((variant: VariantType) => variant.tagLabel === clause.tagLabel);
         if (!variant) error(`tagged union type has no case: ${clause.tagLabel}`, clause.term);
-        const newVariants = [...[] as VariantType[], { tagLabel: clause.tagLabel, props: variant.props }];
-        const localTy = { tag: "TaggedUnion", variants: newVariants } as Type;
+        const newVariants = [...[] satisfies VariantType[], { tagLabel: clause.tagLabel, props: variant.props }];
+        const localTy = { tag: "TaggedUnion", variants: newVariants } satisfies Type;
         const newTyEnv = { ...tyEnv, [t.varName]: localTy };
         const retTy1 = typecheck(clause.term, newTyEnv);
         if (!typeEq(retTy, retTy1)) error("clauses has different types", t);
@@ -583,7 +583,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       return retTy;
     }
     case "recFunc": {
-      const funcTy: Type = { tag: "Func", params: t.params, retType: t.retType } as Type;
+      const funcTy: Type = { tag: "Func", params: t.params, retType: t.retType } satisfies Type;
       let newTyEnv = tyEnv;
       for (const param of t.params) {
         newTyEnv = { ...newTyEnv, [param.name]: param.type };
@@ -595,7 +595,7 @@ export function typecheck(t: Term, tyEnv: TypeEnv): Type {
       return typecheck(t.rest, newTyEnv3);
     }
     case "undefined": {
-      return { tag: "Undefined" } as Type;
+      return { tag: "Undefined" } satisfies Type;
     }
   }
 }
