@@ -1155,7 +1155,7 @@ export function parseObj(code: string): TermForObj {
 export function parseTaggedUnion(code: string): TermForTaggedUnion {
   return subsetSystem(
     parse(code),
-    ["Boolean", "Number", "Func", "TaggedUnion"],
+    ["Boolean", "Number", "Func", "Object", "TaggedUnion"],
     [
       "true",
       "false",
@@ -1167,6 +1167,8 @@ export function parseTaggedUnion(code: string): TermForTaggedUnion {
       "call",
       "seq",
       "const",
+      "objectNew",
+      "objectGet",
       "taggedUnionNew",
       "taggedUnionGet",
     ],

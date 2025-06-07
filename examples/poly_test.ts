@@ -128,18 +128,18 @@ test("type param 1", () =>
   ));
 test("type param 2", () =>
   ok(
-    "(f: { b: { a: boolean } }) => number",
+    "(f: (gg: (ff: boolean) => number) => boolean) => number",
     `
-  type F<X> = G<{a: X}>;
-  type G<X> = {b: X};
+  type F<X> = G<((ff: X) => number)>;
+  type G<X> = (gg: X) => boolean;
   (f: F<boolean>) => 1;
 `,
   ));
 test("type param 3", () =>
   ok(
-    "(f: { a: boolean; b: number }) => number",
+    "(f: (ff: boolean) => number) => number",
     `
-  type F<X, Y> = {a: X, b: Y};
+  type F<X, Y> = (ff: X) => Y;
   (f: F<boolean, number>) => 1;
 `,
   ));
